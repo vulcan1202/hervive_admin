@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive, watch } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 const config = useRuntimeConfig()
 const backendUrl = config.public.backendUrl
 
@@ -109,19 +106,7 @@ const refreshAllData = async () => {
 }
 
 onMounted(() => {
-  const isAdmin = localStorage.getItem('hervive_admin')
-  if (!isAdmin) {
-    const password = prompt('請輸入商家管理密碼：')
-    if (password === 'hervive520') {
-      localStorage.setItem('hervive_admin', 'true')
-      refreshAllData()
-    } else {
-      alert('密碼錯誤！')
-      router.push('/')
-    }
-  } else {
-    refreshAllData()
-  }
+  refreshAllData()
 })
 
 const fetchAllAppointments = async () => {

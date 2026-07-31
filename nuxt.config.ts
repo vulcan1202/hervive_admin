@@ -22,6 +22,12 @@ export default defineNuxtConfig({
     }
   },
 
+  app: {
+    head: {
+      title: '後臺管理 - 赫琟美學', // 在這裡修改
+    }
+  },
+
   nitro: {
     prerender: {
       autoSubfolderIndex: false
