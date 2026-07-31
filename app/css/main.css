@@ -1,0 +1,23 @@
+/* 1. 引入字體：思源宋體 (繁體中文) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&display=swap');
+/* 2. 套用至標題 */
+.title-serif {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: 0.02em; /* 增加輕微字距，提升呼吸感 */
+}
+
+/* 3. 動畫效果 */
+.fade-in {
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
