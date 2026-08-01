@@ -52,17 +52,25 @@
           <Icon name="mdi:view-dashboard-outline" class="text-[20px] min-w-[20px]" />
           <span v-if="!isCollapsed" class="text-sm font-medium">智能儀表盤</span>
         </NuxtLink>
-        <NuxtLink to="/admin" :class="getNavLinkClass('/admin')" @click="closeSidebarOnMobile">
+        <NuxtLink to="/calendar" :class="getNavLinkClass('/calendar')" @click="closeSidebarOnMobile">
           <Icon name="mdi:clipboard-flow-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">預約與訂單</span>
+          <span v-if="!isCollapsed" class="text-sm font-medium">休假與行事曆一覽</span>
+        </NuxtLink>
+        <NuxtLink to="/Appointment" :class="getNavLinkClass('/Appointment')" @click="closeSidebarOnMobile">
+          <Icon name="mdi:clipboard-flow-outline" class="text-[20px] min-w-[20px]" />
+          <span v-if="!isCollapsed" class="text-sm font-medium">預約管理</span>
         </NuxtLink>
         <NuxtLink to="/products" :class="getNavLinkClass('/products')" @click="closeSidebarOnMobile">
           <Icon name="mdi:flask-outline" class="text-[20px] min-w-[20px]" />
           <span v-if="!isCollapsed" class="text-sm font-medium">療程與產品</span>
         </NuxtLink>
-        <NuxtLink to="/clients" :class="getNavLinkClass('/clients')" @click="closeSidebarOnMobile">
+        <NuxtLink to="/courses" :class="getNavLinkClass('/courses')" @click="closeSidebarOnMobile">
           <Icon name="mdi:account-group-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">客戶畫像</span>
+          <span v-if="!isCollapsed" class="text-sm font-medium">課程設定</span>
+        </NuxtLink>
+        <NuxtLink to="/finance" :class="getNavLinkClass('/finance')" @click="closeSidebarOnMobile">
+          <Icon name="mdi:account-cash" class="text-[20px] min-w-[20px]" />
+          <span v-if="!isCollapsed" class="text-sm font-medium">財務管理</span>
         </NuxtLink>
         <NuxtLink to="/analytics" :class="getNavLinkClass('/analytics')" @click="closeSidebarOnMobile">
           <Icon name="mdi:chart-timeline-variant-shimmer" class="text-[20px] min-w-[20px]" />

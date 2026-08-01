@@ -2,30 +2,26 @@
 import { ref, onMounted, computed, reactive, watch } from 'vue'
 
 // ==========================================
-// 1. 環境設定與全域共用狀態 (Config & Global State)
+// 1. 環境設定與全域共用狀態
 // ==========================================
 const config = useRuntimeConfig()
 const backendUrl = config.public.backendUrl
 
 const appointments = ref<any[]>([])
-const holidays = ref<any[]>([])
 const beauticians = ref<any[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
 // ==========================================
-// 2. 集中管理 UI 與 Modal 狀態 (UI State Management)
+// 2. 集中管理 UI 與 Modal 狀態
 // ==========================================
-const showList = ref(false)
 const showBeauticianModal = ref(false)
 const showClientModal = ref(false)
 const showQuestionnaireModal = ref(false)
 const showNoteModal = ref(false)
-const showModal = ref(false)
-const mobileModalTab = ref<'appts' | 'holidays'>('appts')
 
 // ==========================================
-// 3. 通用輔助函式 (Utilities)
+// 3. 通用輔助函式
 // ==========================================
 const formatDateToString = (d: Date | null) => {
   if (!d) return ''
@@ -35,30 +31,8 @@ const formatDateToString = (d: Date | null) => {
   return `${yyyy}-${mm}-${dd}`
 }
 
-const getTaiwanDateString = (dateObj: Date = new Date()) => {
-  const formatter = new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour12: false
-  });
-  const parts = formatter.formatToParts(dateObj);
-  const year = parts.find(p => p.type === 'year')?.value;
-  const month = parts.find(p => p.type === 'month')?.value;
-  const day = parts.find(p => p.type === 'day')?.value;
-  return `${year}-${month}-${day}`;
-}
-
-const getDayTimeOffDisplayText = (dayTimeOffs: any[]) => {
-  if (!dayTimeOffs || dayTimeOffs.length === 0) return '';
-  const firstWithReason = dayTimeOffs.find(t => t.reason && String(t.reason).trim() !== '');
-  const text = firstWithReason ? String(firstWithReason.reason).trim() : '休息';
-  return dayTimeOffs.length > 1 ? `${text}+${dayTimeOffs.length}` : text;
-}
-
 // ==========================================
-// 4. 排序與預約操作邏輯 (Sorting & Appointment Actions)
+// 4. 排序與預約操作邏輯
 // ==========================================
 const sortField = ref<'date' | 'start_time'>('date')
 const sortOrder = ref<'asc' | 'desc'>('asc')
@@ -104,10 +78,7 @@ const updateAppointmentBeautician = async (apptId: number, beauticianId: any) =>
         beautician_id: beauticianId ? Number(beauticianId) : null 
       })
     })
-    if (!res.ok) {
-      const result = await res.json()
-      throw new Error(result.error || '指派美容師失敗')
-    }
+    if (!res.ok) throw new Error('指派美容師失敗')
     fetchAllAppointments()
   } catch (err: any) {
     alert(err.message || '操作失敗')
@@ -129,10 +100,7 @@ const updateAppointmentStatus = async (id: number, newStatus: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status: newStatus })
     })
-    if (!res.ok) {
-      const result = await res.json()
-      throw new Error(result.error || '操作失敗')
-    }
+    if (!res.ok) throw new Error('操作失敗')
     fetchAllAppointments()
   } catch (err: any) {
     alert(err.message || '操作失敗')
@@ -140,7 +108,7 @@ const updateAppointmentStatus = async (id: number, newStatus: string) => {
 }
 
 // ==========================================
-// 5. 核心 API 請求與初始化 (Core API Fetching)
+// 5. 核心 API 請求與初始化
 // ==========================================
 const fetchAllAppointments = async () => {
   loading.value = true
@@ -161,15 +129,6 @@ const fetchAllAppointments = async () => {
   }
 }
 
-const fetchHolidays = async () => {
-  try {
-    const res = await fetch(`${backendUrl}/api/holidays`)
-    if (res.ok) holidays.value = (await res.json()).data
-  } catch (err) {
-    console.error('讀取休假設定失敗', err)
-  }
-}
-
 const fetchBeauticians = async () => {
   try {
     const res = await fetch(`${backendUrl}/api/beauticians`)
@@ -182,7 +141,6 @@ const fetchBeauticians = async () => {
 const refreshAllData = async () => {
   await Promise.all([
     fetchAllAppointments(),
-    fetchHolidays(),
     fetchBeauticians()
   ])
 }
@@ -192,7 +150,7 @@ onMounted(() => {
 })
 
 // ==========================================
-// 6. 搜尋與篩選邏輯 (Search & Filtering)
+// 6. 搜尋與篩選邏輯
 // ==========================================
 const searchQuery = ref('')
 const searchCodeSuffix = ref('')
@@ -200,23 +158,36 @@ const startDateObj = ref<Date | null>(null)
 const endDateObj = ref<Date | null>(null)
 const startDateFilter = ref('')
 const endDateFilter = ref('')
+const statusFilter = ref('')
 
-watch(startDateObj, (newVal) => startDateFilter.value = formatDateToString(newVal))
-watch(endDateObj, (newVal) => endDateFilter.value = formatDateToString(newVal))
+// 🌟 更新 watch 加入防呆邏輯
+watch(startDateObj, (newVal) => {
+  startDateFilter.value = formatDateToString(newVal)
+  // 如果結束日期早於新的開始日期，自動將結束日期對齊開始日期
+  if (newVal && endDateObj.value && endDateObj.value < newVal) {
+    endDateObj.value = new Date(newVal)
+  }
+})
+watch(endDateObj, (newVal) => {
+  endDateFilter.value = formatDateToString(newVal)
+})
 
 const filteredAppointments = computed(() => {
   return appointments.value.filter(a => {
+    // 1. 姓名或電話搜尋
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.trim().toLowerCase()
       const matchName = a.client_name && a.client_name.toLowerCase().includes(q)
       const matchPhone = a.client_phone && a.client_phone.includes(q)
       if (!matchName && !matchPhone) return false
     }
+    // 2. 預約單號搜尋
     if (searchCodeSuffix.value.trim()) {
       const codeQ = searchCodeSuffix.value.trim().toUpperCase()
       const fullCode = (a.appointment_code || '').toUpperCase()
       if (!fullCode.endsWith(codeQ) && !fullCode.includes(codeQ)) return false
     }
+    // 3. 日期區間篩選
     if (startDateFilter.value && endDateFilter.value) {
       if (a.date < startDateFilter.value || a.date > endDateFilter.value) return false
     } else if (startDateFilter.value) {
@@ -224,6 +195,11 @@ const filteredAppointments = computed(() => {
     } else if (endDateFilter.value) {
       if (a.date > endDateFilter.value) return false
     }
+    // 4. 目前狀態篩選
+    if (statusFilter.value) {
+      if (a.status !== statusFilter.value) return false
+    }
+    
     return true
   })
 })
@@ -235,177 +211,15 @@ const clearAllFilters = () => {
   endDateObj.value = null
   startDateFilter.value = ''
   endDateFilter.value = ''
+  statusFilter.value = '' 
 }
 
 const hasActiveFilters = computed(() => {
-  return !!(searchQuery.value || searchCodeSuffix.value || startDateFilter.value || endDateFilter.value)
+  return !!(searchQuery.value || searchCodeSuffix.value || startDateFilter.value || endDateFilter.value || statusFilter.value)
 })
 
 // ==========================================
-// 7. 行事曆與休假管理模組 (Calendar & Holiday Management)
-// ==========================================
-const currentDate = ref(new Date())
-const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-const selectedDay = ref<any>(null)
-const timeOffForm = reactive({ start: '12:00', end: '13:00', reason: '' })
-
-const currentYearMonth = computed(() => `${currentDate.value.getFullYear()} 年 ${currentDate.value.getMonth() + 1} 月`)
-
-const timeOptions = computed(() => {
-  const times = []
-  for (let h = 8; h <= 23; h++) {
-    times.push(`${String(h).padStart(2, '0')}:00`)
-    times.push(`${String(h).padStart(2, '0')}:30`)
-  }
-  return times
-})
-
-const changeMonth = (offset: number) => {
-  currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + offset, 1)
-}
-
-const calendarDays = computed(() => {
-  const year = currentDate.value.getFullYear()
-  const month = currentDate.value.getMonth()
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const todayTaiwanStr = getTaiwanDateString()
-
-  const days = []
-  for (let i = 0; i < firstDay; i++) days.push(null)
-  
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
-    const dayOfWeek = new Date(year, month, i).getDay()
-    
-    const dayAppts = appointments.value.filter(a => a.date === dateStr && a.status !== 'complete')
-    const isWeeklyOff = holidays.value.some(h => h.type === 'weekly' && h.day_of_week === dayOfWeek)
-    const isFullDayOff = holidays.value.some(h => h.type === 'full_day' && h.date === dateStr)
-    const dayTimeOffs = holidays.value.filter(h => h.type === 'time_range' && h.date === dateStr)
-
-    days.push({
-      date: i,
-      fullDate: dateStr,
-      dayOfWeek,
-      dayAppts,
-      isOff: isWeeklyOff || isFullDayOff,
-      hasTimeOff: dayTimeOffs.length > 0 && !isWeeklyOff && !isFullDayOff,
-      dayTimeOffs,
-      isToday: dateStr === todayTaiwanStr
-    })
-  }
-  return days
-})
-
-const openDayModal = (day: any) => {
-  if (!day) return
-  selectedDay.value = day
-  mobileModalTab.value = 'appts'
-  showModal.value = true
-}
-
-const selectedDayAppointments = computed(() => {
-  if (!selectedDay.value) return []
-  return appointments.value.filter(a => a.date === selectedDay.value.fullDate)
-})
-
-const selectedDayTimeOffs = computed(() => {
-  if (!selectedDay.value) return []
-  return holidays.value.filter(h => h.type === 'time_range' && h.date === selectedDay.value.fullDate)
-})
-
-const selectedDayFullOff = computed(() => {
-  if (!selectedDay.value) return null
-  return holidays.value.find(h => h.type === 'full_day' && h.date === selectedDay.value.fullDate)
-})
-
-const isSelectedDayWeeklyOff = computed(() => {
-  if (!selectedDay.value) return false
-  return holidays.value.some(h => h.type === 'weekly' && h.day_of_week === selectedDay.value.dayOfWeek)
-})
-
-const toggleFullDayOff = async () => {
-  if (isSelectedDayWeeklyOff.value) return alert('此日已是每週固定公休！')
-  try {
-    if (selectedDayFullOff.value) {
-      await fetch(`${backendUrl}/api/holidays?id=${selectedDayFullOff.value.id}`, { method: 'DELETE' })
-    } else {
-      await fetch(`${backendUrl}/api/holidays`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'full_day', date: selectedDay.value.fullDate })
-      })
-    }
-    await fetchHolidays()
-  } catch (err: any) {
-    alert('設定失敗')
-  }
-}
-
-const addTimeOff = async () => {
-  if (timeOffForm.start >= timeOffForm.end) return alert('結束時間必須大於開始時間！')
-  
-  const isOverlap = selectedDayTimeOffs.value.some(off => {
-    return timeOffForm.start < off.end_time && timeOffForm.end > off.start_time;
-  });
-
-  if (isOverlap) {
-    return alert('⛔ 新增的休息時段與現有時段重疊，請重新調整時間！');
-  }
-
-  try {
-    const res = await fetch(`${backendUrl}/api/holidays`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'time_range',
-        date: selectedDay.value.fullDate,
-        start_time: timeOffForm.start,
-        end_time: timeOffForm.end,
-        reason: timeOffForm.reason.trim() || null
-      })
-    })
-    if (!res.ok) throw new Error('設定失敗')
-    timeOffForm.reason = ''
-    await fetchHolidays()
-  } catch (err: any) {
-    alert(err.message || '設定失敗')
-  }
-}
-
-const deleteHoliday = async (id: number) => {
-  try {
-    await fetch(`${backendUrl}/api/holidays?id=${id}`, { method: 'DELETE' })
-    await fetchHolidays()
-  } catch (err: any) {
-    alert('刪除失敗')
-  }
-}
-
-const toggleWeeklyOff = async (dayIndex: number) => {
-  const existing = holidays.value.find(h => h.type === 'weekly' && h.day_of_week === dayIndex)
-  try {
-    if (existing) {
-      await fetch(`${backendUrl}/api/holidays?id=${existing.id}`, { method: 'DELETE' })
-    } else {
-      await fetch(`${backendUrl}/api/holidays`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'weekly', day_of_week: dayIndex })
-      })
-    }
-    await fetchHolidays()
-  } catch (err: any) {
-    alert('設定失敗')
-  }
-}
-
-const isWeeklyOff = (dayIndex: number) => {
-  return holidays.value.some(h => h.type === 'weekly' && h.day_of_week === dayIndex)
-}
-
-// ==========================================
-// 8. 美容師團隊管理模組 (Beautician Management)
+// 7. 美容師團隊管理模組
 // ==========================================
 const newBeauticianName = ref('')
 const editingBeauticianId = ref<number | null>(null)
@@ -460,7 +274,7 @@ const deleteBeautician = async (id: number, name: string) => {
 }
 
 // ==========================================
-// 9. 客戶詳情與問卷管理模組 (Client & Questionnaire)
+// 8. 客戶詳情與問卷管理模組
 // ==========================================
 const selectedClient = ref<any>(null)
 const questionnaireData = ref<any>(null)
@@ -475,15 +289,8 @@ const howToKnowMap: Record<string, string> = {
 }
 
 const questionnaireForm = reactive({
-  how_to_know: '',
-  history_of_treatments: '',
-  allergies: '',
-  medical_history: '',
-  skin_type: '',
-  concerns: '',
-  Habit: '',
-  notes: '',
-  agreed_to_terms: false
+  how_to_know: '', history_of_treatments: '', allergies: '', medical_history: '',
+  skin_type: '', concerns: '', Habit: '', notes: '', agreed_to_terms: false
 })
 
 const getClientHistory = (userId: number) => {
@@ -563,7 +370,7 @@ const saveQuestionnaire = async () => {
 }
 
 // ==========================================
-// 10. 備註管理模組 (Notes Management)
+// 9. 備註管理模組
 // ==========================================
 const editingNoteAppt = ref<any>(null)
 const noteInput = ref('')
@@ -609,6 +416,120 @@ const saveUserNotes = async (appt: any) => {
     alert(err.message || '操作失敗')
   }
 }
+
+// ==========================================
+// 10. 點收與課程扣堂模組 (Complete & Course Deduction)
+// ==========================================
+const showCompleteModal = ref(false)
+const selectedApptForComplete = ref<any>(null)
+const clientActivePackages = ref<any[]>([])
+const loadingPackages = ref(false)
+const availableCoursesList = ref<any[]>([])
+
+// 紀錄勾選要扣除的既有課程：[user_course_id] = use_count
+const selectedCoursesToDeduct = reactive<Record<number, number>>({})
+
+// 紀錄當下新購買並使用的課程
+const newCoursesToBuy = ref<Array<{ course_id: string | number, buy_amount: number, use_count: number, payment_method: string }>>([])
+
+const openCompleteModal = async (appt: any) => {
+  selectedApptForComplete.value = appt
+  showCompleteModal.value = true
+  loadingPackages.value = true
+  
+  // 清空狀態
+  for (const key in selectedCoursesToDeduct) delete selectedCoursesToDeduct[key]
+  newCoursesToBuy.value = []
+
+  try {
+    // 平行抓取客戶剩餘包套 & 全店所有課程項目
+    const [pkgRes, courseRes] = await Promise.all([
+      fetch(`${backendUrl}/api/users-courses?user_id=${appt.user_id}&has_remaining=true`),
+      fetch(`${backendUrl}/api/courses`)
+    ])
+    
+    if (pkgRes.ok) {
+      const pkgData = await pkgRes.json()
+      clientActivePackages.value = pkgData.data || []
+    }
+    
+    if (courseRes.ok) {
+      const courseData = await courseRes.json()
+      availableCoursesList.value = courseData.data || []
+    }
+  } catch (err) {
+    console.error("撈取點收資料失敗", err)
+  } finally {
+    loadingPackages.value = false
+  }
+}
+
+// 點擊既有包套卡片切換勾選狀態
+const toggleCourseSelection = (userCourseId: number) => {
+  if (selectedCoursesToDeduct[userCourseId] !== undefined) {
+    delete selectedCoursesToDeduct[userCourseId]
+  } else {
+    selectedCoursesToDeduct[userCourseId] = 1 // 預設扣減 1 堂
+  }
+}
+
+// 新增現場加購項目
+const addNewCoursePurchase = () => {
+  newCoursesToBuy.value.push({
+    course_id: '',
+    buy_amount: 1,
+    use_count: 1,
+    payment_method: 'Cash'
+  })
+}
+
+// 刪除現場加購項目
+const removeNewCoursePurchase = (index: number) => {
+  newCoursesToBuy.value.splice(index, 1)
+}
+
+// 送出點收完成
+const submitCompleteAppointment = async () => {
+  if (!selectedApptForComplete.value) return
+
+  const courses_used = Object.entries(selectedCoursesToDeduct).map(([id, count]) => ({
+    user_course_id: Number(id),
+    use_count: Number(count)
+  }))
+
+  const new_courses_bought = newCoursesToBuy.value
+    .filter(c => c.course_id !== '') 
+    .map(c => ({
+      course_id: Number(c.course_id),
+      buy_amount: Number(c.buy_amount),
+      use_count: Number(c.use_count),
+      payment_method: c.payment_method
+    }))
+
+  try {
+    const res = await fetch(`${backendUrl}/api/appointments/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appointment_id: selectedApptForComplete.value.id,
+        courses_used,
+        new_courses_bought,
+        date: selectedApptForComplete.value.date
+      })
+    })
+
+    if (!res.ok) {
+      const errData = await res.json()
+      throw new Error(errData.error || "點收失敗")
+    }
+
+    alert("✅ 預約已完成點收，堂數扣減與營收認列已成功！")
+    showCompleteModal.value = false
+    refreshAllData() // 更新預約列表與狀態
+  } catch (err: any) {
+    alert(err.message)
+  }
+}
 </script>
 
 <template>
@@ -617,8 +538,8 @@ const saveUserNotes = async (appt: any) => {
     <!-- 頂部抬頭區 -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
       <div>
-        <h2 class="text-2xl md:text-3xl font-bold text-[#154337] title-serif mb-1 md:mb-2">排程管理中心</h2>
-        <p class="text-gray-500 text-xs md:text-sm">點擊日曆管理每日預約與休假，也可隨時展開預約總表</p>
+        <h2 class="text-2xl md:text-3xl font-bold text-[#154337] title-serif mb-1 md:mb-2">預約清單管理</h2>
+        <p class="text-gray-500 text-xs md:text-sm">查看與管理所有預約資料</p>
       </div>
       <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full md:w-auto">
         <button @click="showBeauticianModal = true" class="px-3 py-2.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-[#154337] text-white hover:bg-opacity-90 shadow-sm transition flex items-center justify-center gap-1.5">
@@ -629,80 +550,11 @@ const saveUserNotes = async (appt: any) => {
           <Icon name="mdi:refresh" size="18" :class="{ 'animate-spin': loading }" />
           重新整理
         </button>
-        <button @click="showList = !showList" :class="['col-span-2 sm:col-span-1 px-4 py-2.5 md:px-6 md:py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm', showList ? 'bg-[#154337] text-white' : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50']">
-          <Icon :name="showList ? 'mdi:eye-off' : 'mdi:eye'" size="18" />
-          {{ showList ? '隱藏預約總表' : '展開預約總表' }}
-        </button>
       </div>
     </div>
 
-    <!-- 模組 A：行事曆 -->
-    <div class="space-y-4 md:space-y-6 mb-8">
-      <!-- 固定公休設定 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        <div>
-          <h3 class="font-bold text-[#154337] text-sm md:text-base">每週固定公休設定</h3>
-          <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">勾選的日子將自動套用至行事曆全天公休</p>
-        </div>
-        <div class="flex flex-wrap gap-1.5 md:gap-2 w-full md:w-auto justify-between md:justify-start">
-          <label v-for="(day, index) in weekdays" :key="index" class="cursor-pointer relative">
-            <input type="checkbox" class="peer sr-only" :checked="isWeeklyOff(index)" @change="toggleWeeklyOff(index)" />
-            <div class="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full text-xs md:text-sm font-bold border-2 transition-all peer-checked:bg-[#154337] peer-checked:border-[#154337] peer-checked:text-white border-gray-200 text-gray-400 hover:border-[#154337]">
-              {{ day }}
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- 日曆 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] overflow-hidden">
-        <div class="flex justify-between items-center bg-gray-50 px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
-          <button @click="changeMonth(-1)" class="p-1.5 md:p-2 text-gray-500 hover:text-[#154337] hover:bg-white rounded-lg transition shadow-sm border border-transparent hover:border-gray-200">
-            <Icon name="mdi:chevron-left" size="22" />
-          </button>
-          <h3 class="text-base md:text-xl font-bold text-gray-800 tracking-wider">{{ currentYearMonth }}</h3>
-          <button @click="changeMonth(1)" class="p-1.5 md:p-2 text-gray-500 hover:text-[#154337] hover:bg-white rounded-lg transition shadow-sm border border-transparent hover:border-gray-200">
-            <Icon name="mdi:chevron-right" size="22" />
-          </button>
-        </div>
-        <div class="grid grid-cols-7 border-b border-gray-200 text-center bg-white">
-          <div v-for="day in weekdays" :key="day" class="py-2 md:py-3 text-[11px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">{{ day }}</div>
-        </div>
-        <div class="grid grid-cols-7 bg-gray-100 gap-px p-px">
-          <div v-for="(day, index) in calendarDays" :key="index" @click="openDayModal(day)" :class="['min-h-[70px] sm:min-h-[90px] md:min-h-[130px] bg-white p-1 md:p-2 transition relative group overflow-hidden', !day ? 'bg-gray-50/40 cursor-default pointer-events-none' : 'cursor-pointer hover:bg-gray-50/80', day && day.isOff ? 'bg-red-50/30' : '']">
-            <template v-if="day">
-              <div class="flex justify-between items-center mb-1">
-                <div :class="['text-xs md:text-xs font-bold w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full', day.isToday ? 'bg-[#154337] text-white shadow-sm' : 'text-gray-700']">{{ day.date }}</div>
-                <span v-if="day.isOff" class="hidden sm:inline-block text-[9px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold truncate max-w-[65px] md:max-w-[80px]">全天公休</span>
-                <!-- 桌機版顯示 -->
-                <span v-else-if="day.hasTimeOff" class="hidden sm:inline-block text-[9px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded font-bold truncate max-w-[65px] md:max-w-[80px]">
-                  {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
-                </span>
-              </div>
-              <div class="block sm:hidden mt-0.5">
-                <div v-if="day.isOff" class="text-[9px] text-red-600 font-bold bg-red-100/80 px-1 py-0.5 rounded text-center">公休</div>
-                <!-- 手機版顯示 -->
-                <div v-else-if="day.hasTimeOff" class="text-[9px] text-orange-700 font-bold bg-orange-100/80 px-1 py-0.5 rounded text-center truncate w-full">
-                  {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
-                </div>
-                <div v-if="day.dayAppts && day.dayAppts.length > 0" class="mt-1 flex justify-center">
-                  <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full leading-none">{{ day.dayAppts.length }} 筆</span>
-                </div>
-              </div>
-              <div v-if="day.dayAppts && day.dayAppts.length > 0" class="hidden sm:block space-y-1 mt-1 max-h-[90px] overflow-y-auto">
-                <div v-for="appt in day.dayAppts" :key="appt.id" :class="['text-[10px] p-1.5 rounded border leading-tight flex flex-col gap-0.5 shadow-2xs', appt.status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-900' : appt.status === 'pending' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-red-50 border-red-200 text-red-800 opacity-75']">
-                  <div class="font-bold truncate flex justify-between items-center"><span>{{ appt.start_time }} {{ appt.client_name }}</span></div>
-                  <div class="text-[9px] opacity-80 truncate flex items-center justify-between"><span>✂️ {{ appt.beautician_name || '未指派' }}</span></div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 模組 B：清單模式 -->
-    <div v-if="showList" class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] p-4 sm:p-6 md:p-8 animate-fade-in mb-8">
+    <!-- 預約清單主體 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] p-4 sm:p-6 md:p-8 mb-8">
       <div class="flex flex-col gap-4 mb-6 border-b border-gray-100 pb-6">
         <div class="flex justify-between items-center">
           <h3 class="text-lg md:text-xl font-bold text-[#154337] flex items-center gap-2">
@@ -714,7 +566,7 @@ const saveUserNotes = async (appt: any) => {
         </div>
 
         <!-- 搜尋工具列 -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-200 items-end">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-200 items-end">
           <div class="col-span-2 lg:col-span-1">
             <label class="block text-xs font-bold text-gray-500 mb-1">顧客姓名 / 電話</label>
             <div class="relative">
@@ -722,6 +574,7 @@ const saveUserNotes = async (appt: any) => {
               <input type="text" v-model="searchQuery" placeholder="搜尋姓名或電話..." class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[38px]" />
             </div>
           </div>
+          
           <div class="col-span-2 lg:col-span-1">
             <label class="block text-xs font-bold text-gray-500 mb-1">預約單號 (六碼)</label>
             <div class="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#154337] h-[38px]">
@@ -729,16 +582,36 @@ const saveUserNotes = async (appt: any) => {
               <input type="text" v-model="searchCodeSuffix" placeholder="例如：A8X9K2" maxlength="6" class="w-full px-2.5 py-2 text-xs focus:outline-none font-mono uppercase" />
             </div>
           </div>
+          
+          <!-- 目前狀態篩選 -->
+          <div class="col-span-2 sm:col-span-1 lg:col-span-1">
+            <label class="block text-xs font-bold text-gray-500 mb-1">目前狀態</label>
+            <select v-model="statusFilter" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[38px] outline-none">
+              <option value="">全部狀態</option>
+              <option value="pending">審核中</option>
+              <option value="confirmed">已確認</option>
+              <option value="complete">已完成</option>
+              <option value="cancelled">已取消</option>
+            </select>
+          </div>
+
           <div class="col-span-1">
             <label class="block text-xs font-bold text-gray-500 mb-1">日期 (開始)</label>
             <ClientOnly>
               <MyCalendar v-model="startDateObj" placeholder="選擇開始日期" class="compact-date-picker" />
             </ClientOnly>
           </div>
+          
           <div class="col-span-1">
             <label class="block text-xs font-bold text-gray-500 mb-1">日期 (結束)</label>
             <ClientOnly>
-              <MyCalendar v-model="endDateObj" placeholder="選擇結束日期" class="compact-date-picker" />
+              <!-- 🌟 加入 :min-date 限制 -->
+              <MyCalendar 
+                v-model="endDateObj" 
+                placeholder="選擇結束日期" 
+                :min-date="startDateObj" 
+                class="compact-date-picker" 
+              />
             </ClientOnly>
           </div>
         </div>
@@ -751,7 +624,6 @@ const saveUserNotes = async (appt: any) => {
         <!-- 手機端卡片設計 -->
         <div class="block md:hidden space-y-4">
           <div v-for="appt in filteredAppointments" :key="appt.id" class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
-            <!-- 上層：日期時間與狀態 -->
             <div class="flex justify-between items-start border-b border-gray-100 pb-3">
               <div class="flex flex-col gap-1">
                 <span class="text-[15px] font-black text-[#154337]">{{ appt.date }} <span class="text-gray-400 mx-1">|</span> {{ appt.start_time }}</span>
@@ -761,7 +633,6 @@ const saveUserNotes = async (appt: any) => {
                 {{ appt.status === 'complete' ? '已完成' : appt.status === 'confirmed' ? '已確認' : appt.status === 'cancelled' ? '已取消' : '審核中' }}
               </span>
             </div>
-            <!-- 中層：客戶與美容師 -->
             <div class="flex flex-col gap-2.5 bg-gray-50/70 p-3 rounded-lg border border-gray-100">
               <div class="flex justify-between items-center">
                 <span class="text-xs text-gray-500 font-bold">客戶姓名</span>
@@ -778,7 +649,6 @@ const saveUserNotes = async (appt: any) => {
                 </select>
               </div>
             </div>
-            <!-- 下層：操作按鈕區 -->
             <div class="pt-1 flex flex-col gap-2">
               <button @click="openNoteModal(appt)" class="w-full py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs font-bold text-[#154337] flex justify-center items-center gap-1.5 transition">
                 <Icon name="mdi:note-edit-outline" size="16" />
@@ -786,7 +656,9 @@ const saveUserNotes = async (appt: any) => {
               </button>
               <div class="flex gap-2 w-full mt-1">
                 <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="flex-1 py-2.5 text-xs bg-green-600 text-white rounded-lg font-bold">核准</button>
-                <button v-if="appt.status === 'confirmed'" @click="updateAppointmentStatus(appt.id, 'complete')" class="flex-1 py-2.5 text-xs bg-blue-600 text-white rounded-lg font-bold">完成</button>
+                
+                <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="flex-1 py-2.5 text-xs bg-blue-600 text-white rounded-lg font-bold">完成</button>
+                
                 <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="flex-1 py-2.5 text-xs bg-orange-500 text-white rounded-lg font-bold">未完成</button>
                 <button v-if="appt.status !== 'cancelled' && appt.status !== 'complete'" @click="updateAppointmentStatus(appt.id, 'cancelled')" class="flex-1 py-2.5 text-xs bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold">取消</button>
               </div>
@@ -846,7 +718,9 @@ const saveUserNotes = async (appt: any) => {
                 </td>
                 <td class="p-3.5 text-right space-x-2 whitespace-nowrap">
                   <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition">核准</button>
-                  <button v-if="appt.status === 'confirmed'" @click="updateAppointmentStatus(appt.id, 'complete')" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition">完成</button>
+                  
+                  <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition">完成</button>
+                  
                   <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition">未完成</button>
                   <button v-if="appt.status !== 'cancelled' && appt.status !== 'complete'" @click="updateAppointmentStatus(appt.id, 'cancelled')" class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">取消</button>
                 </td>
@@ -857,107 +731,118 @@ const saveUserNotes = async (appt: any) => {
       </div>
     </div>
 
-    <!-- 行事曆彈窗 -->
-    <div v-if="showModal && selectedDay" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 sm:p-4 z-50">
-      <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden max-h-[90vh] relative">
-        <button @click="showModal = false" class="absolute top-3 right-3 z-20 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
+    <!-- 結帳點收 Modal -->
+    <div v-if="showCompleteModal && selectedApptForComplete" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto">
+        <button @click="showCompleteModal = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
           <Icon name="mdi:close" size="22" />
         </button>
-        <div class="flex border-b border-gray-200 md:hidden bg-white sticky top-0 z-10 pr-10">
-          <button @click="mobileModalTab = 'appts'" :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'appts' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']">📅 當日預約 ({{ selectedDayAppointments.length }})</button>
-          <button @click="mobileModalTab = 'holidays'" :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'holidays' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']">🏖️ 休假設定</button>
-        </div>
 
-        <div :class="['w-full md:w-1/2 bg-gray-50 p-4 sm:p-6 overflow-y-auto border-r border-gray-200', mobileModalTab === 'appts' ? 'block' : 'hidden md:block']">
-          <div class="flex items-center justify-between mb-4 md:mb-6">
-            <h3 class="text-xl md:text-2xl font-black text-[#154337] tracking-wider">{{ selectedDay.fullDate }}</h3>
-            <span class="text-xs md:text-sm font-bold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">星期{{ weekdays[selectedDay.dayOfWeek] }}</span>
-          </div>
-          <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm md:text-base"><Icon name="mdi:calendar-check" size="18"/> 當日預約名單</h4>
-          <div v-if="selectedDayAppointments.length === 0" class="bg-white rounded-xl p-6 text-center text-gray-400 border border-dashed border-gray-300 text-xs md:text-sm">當日無預約</div>
-          <div v-else class="space-y-3">
-            <div v-for="appt in selectedDayAppointments" :key="appt.id" class="bg-white p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 border-l-4" :class="appt.status === 'complete' ? 'border-l-blue-500' : appt.status === 'cancelled' ? 'border-l-red-500 opacity-60' : 'border-l-[#154337]'">
-              <div class="flex justify-between items-start mb-2">
-                <span class="font-black text-base md:text-lg text-gray-800">{{ appt.start_time }} - {{ appt.end_time }}</span>
-                <span :class="['text-[10px] md:text-xs font-bold px-2 py-0.5 rounded', appt.status === 'complete' ? 'bg-blue-100 text-blue-700' : appt.status === 'confirmed' ? 'bg-green-100 text-green-700' : appt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800']">
-                  {{ appt.status === 'complete' ? '已完成' : appt.status === 'confirmed' ? '已確認' : appt.status === 'cancelled' ? '已取消' : '審核中' }}
-                </span>
-              </div>
-              <div class="mb-2.5 flex items-center gap-2 text-xs">
-                <span class="font-bold text-gray-500">美容師：</span>
-                <select :value="appt.beautician_id || ''" @change="updateAppointmentBeautician(appt.id, ($event.target as HTMLSelectElement).value)" class="border border-gray-300 rounded px-2 py-1 text-xs bg-white">
-                  <option value="">未指派</option>
-                  <option v-for="b in beauticians" :key="b.id" :value="b.id">{{ b.name }}</option>
-                </select>
-              </div>
-              <div class="mb-2.5">
-                <button @click="openClientModal(appt)" class="font-bold text-xs md:text-sm text-gray-800 hover:text-[#154337] flex items-center gap-1.5 text-left transition">
-                  <span class="underline decoration-dotted underline-offset-4">{{ appt.client_name }}</span>
-                  <span v-if="appt.visit_count > 0" class="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-black">履約 {{ appt.visit_count }} 次</span>
-                  <Icon name="mdi:chevron-right" size="16" class="text-gray-400" />
-                </button>
-              </div>
-              <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[10px] font-bold text-gray-500 flex items-center gap-1"><Icon name="mdi:note-edit-outline" size="14" /> 預約單筆備註</span>
-                  <button @click="openNoteModal(appt)" class="text-[10px] text-[#154337] font-bold hover:underline">查看/編輯</button>
-                </div>
-                <p class="text-xs text-gray-600 truncate">{{ appt.notes || '無備註' }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h3 class="text-lg font-bold text-[#154337] mb-1 flex items-center gap-2">
+          <Icon name="mdi:check-circle-outline" size="22" /> 預約完成點收
+        </h3>
+        <p class="text-xs text-gray-500 mb-4">
+          客戶：<span class="font-bold text-gray-800">{{ selectedApptForComplete.client_name }}</span> | 
+          時間：{{ selectedApptForComplete.date }} {{ selectedApptForComplete.start_time }}
+        </p>
 
-        <!-- 休假設定 -->
-        <div :class="['w-full md:w-1/2 bg-white p-4 sm:p-6 overflow-y-auto relative', mobileModalTab === 'holidays' ? 'block' : 'hidden md:block']">
-          <h4 class="font-bold text-gray-700 mb-4 md:mb-6 flex items-center gap-2 text-sm md:text-base"><Icon name="mdi:beach" size="18"/> 休假排程設定</h4>
-          <div class="bg-red-50 rounded-xl p-4 mb-5 border border-red-100">
-            <div class="flex items-center justify-between">
+        <!-- 客戶可用包套清單 -->
+        <div class="space-y-3 my-4">
+          <p class="text-sm font-bold text-gray-700 border-b border-gray-100 pb-1">1. 扣減既有包套</p>
+          
+          <div v-if="loadingPackages" class="text-xs text-gray-400 py-2 text-center">載入客戶包套中...</div>
+          <div v-else-if="clientActivePackages.length === 0" class="p-3 bg-amber-50 text-amber-800 rounded-xl text-xs border border-amber-200">
+            該客戶目前沒有可用的剩餘包套。
+          </div>
+
+          <div 
+            v-else 
+            v-for="pkg in clientActivePackages" 
+            :key="pkg.id"
+            :class="['p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-2', selectedCoursesToDeduct[pkg.id] !== undefined ? 'border-[#154337] bg-[#154337]/5' : 'border-gray-200 bg-white']"
+            @click="toggleCourseSelection(pkg.id)"
+          >
+            <div class="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                :checked="selectedCoursesToDeduct[pkg.id] !== undefined"
+                class="w-4 h-4 text-[#154337] rounded border-gray-300"
+              />
               <div>
-                <p class="font-bold text-red-800 text-xs md:text-sm">整日公休</p>
-                <p class="text-[10px] md:text-xs text-red-600 mt-0.5" v-if="isSelectedDayWeeklyOff">此日為每週固定公休，不可在此取消。</p>
-                <p class="text-[10px] md:text-xs text-red-600 mt-0.5" v-else>開啟後，今日將無法被預約。</p>
+                <p class="text-sm font-bold text-gray-800">{{ pkg.course_name }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">剩餘：<span class="font-bold text-[#154337]">{{ pkg.remaining_count }}</span> 堂</p>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 pointer-events-none': isSelectedDayWeeklyOff }">
-                <input type="checkbox" class="sr-only peer" :checked="!!selectedDayFullOff || isSelectedDayWeeklyOff" @change="toggleFullDayOff">
-                <div class="w-10 h-5 md:w-11 md:h-6 bg-gray-300 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 md:after:h-5 md:after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-              </label>
+            </div>
+
+            <!-- 堂數選擇 (若有勾選) -->
+            <div v-if="selectedCoursesToDeduct[pkg.id] !== undefined" class="flex items-center gap-2 self-end sm:self-auto bg-white p-1 rounded-lg border border-gray-200 shadow-sm" @click.stop>
+              <span class="text-xs text-gray-500 font-bold ml-1">扣除</span>
+              <input 
+                type="number" 
+                v-model.number="selectedCoursesToDeduct[pkg.id]"
+                min="1" 
+                :max="pkg.remaining_count"
+                class="w-12 border border-gray-300 rounded p-1 text-center text-xs font-bold focus:ring-1 focus:ring-[#154337]"
+              />
+              <span class="text-xs text-gray-500 mr-1">堂</span>
             </div>
           </div>
-          <div v-if="!selectedDayFullOff && !isSelectedDayWeeklyOff">
-            <div class="mb-4">
-              <label class="block text-xs md:text-sm font-bold text-gray-700 mb-2">新增時段性休息 (30分鐘為單位)</label>
-              
-              <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-                <div class="flex gap-2 items-center flex-1">
-                  <select v-model="timeOffForm.start" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none">
-                    <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
-                  </select>
-                  <span class="text-xs text-gray-400 font-bold">至</span>
-                  <select v-model="timeOffForm.end" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none">
-                    <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
-                  </select>
-                </div>
-                
-                <div class="flex gap-2 items-center flex-1">
-                  <input type="text" v-model="timeOffForm.reason" placeholder="事由 (選填，預設為休息)" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none" @keyup.enter="addTimeOff" />
-                  <button @click="addTimeOff" class="bg-[#154337] text-white px-4 py-2.5 sm:py-2 rounded-lg text-xs md:text-sm font-bold hover:bg-opacity-90 transition whitespace-nowrap shadow-sm">新增</button>
-                </div>
-              </div>
+        </div>
+
+        <!-- 當下新購買並使用 -->
+        <div class="space-y-3 mt-6">
+          <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+            <p class="text-sm font-bold text-gray-700">2. 現場加購 / 當下購買即使用</p>
+            <button type="button" @click="addNewCoursePurchase" class="text-xs text-[#154337] font-bold hover:underline bg-gray-50 px-2 py-1 rounded border border-gray-200">
+              + 新增項目
+            </button>
+          </div>
+
+          <div v-if="newCoursesToBuy.length === 0" class="text-xs text-gray-400 italic py-2">
+            無現場加購項目。
+          </div>
+
+          <div v-for="(newCourse, index) in newCoursesToBuy" :key="index" class="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2 relative">
+            <button @click="removeNewCoursePurchase(index)" class="absolute top-2 right-2 text-red-400 hover:text-red-600 bg-white rounded-full p-0.5 shadow-sm">
+              <Icon name="mdi:close" size="16" />
+            </button>
+            
+            <div>
+              <label class="block text-xs font-bold text-gray-600 mb-1">選擇課程</label>
+              <select v-model="newCourse.course_id" class="w-full border border-gray-300 rounded p-1.5 text-xs bg-white focus:ring-1 focus:ring-[#154337]">
+                <option value="" disabled>請選擇課程...</option>
+                <option v-for="c in availableCoursesList" :key="c.id" :value="c.id">{{ c.name }} (單價 ${{ c.price }})</option>
+              </select>
             </div>
             
-            <div class="space-y-2 mt-4">
-              <p class="text-xs font-bold text-gray-500 mb-1">已設定的休息時段：</p>
-              <div v-if="selectedDayTimeOffs.length === 0" class="text-xs text-gray-400 italic">無設定</div>
-              <div v-for="off in selectedDayTimeOffs" :key="off.id" class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-xs hover:bg-gray-100 transition">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-gray-700">{{ off.start_time }} - {{ off.end_time }}</span>
-                  <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold">{{ off.reason || '休息' }}</span>
-                </div>
-                <button @click="deleteHoliday(off.id)" class="text-red-500 hover:bg-red-100 p-1.5 rounded transition"><Icon name="mdi:delete" size="16" /></button>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">購買總堂數</label>
+                <input type="number" v-model.number="newCourse.buy_amount" min="1" class="w-full border border-gray-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-[#154337]" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">本次消耗堂數</label>
+                <input type="number" v-model.number="newCourse.use_count" min="1" :max="newCourse.buy_amount" class="w-full border border-gray-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-[#154337]" />
               </div>
             </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-gray-600 mb-1">付款方式</label>
+              <select v-model="newCourse.payment_method" class="w-full border border-gray-300 rounded p-1.5 text-xs bg-white focus:ring-1 focus:ring-[#154337]">
+                <option value="Cash">現金 (Cash)</option>
+                <option value="Line Pay">Line Pay</option>
+                <option value="Credit Card">信用卡</option>
+                <option value="Transfer">匯款</option>
+              </select>
+            </div>
           </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
+          <button @click="showCompleteModal = false" class="px-4 py-2 text-xs font-bold bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300">取消</button>
+          <button @click="submitCompleteAppointment" class="px-4 py-2 text-xs font-bold bg-[#154337] text-white rounded-xl hover:bg-opacity-90">
+            確定完成並點收
+          </button>
         </div>
       </div>
     </div>
@@ -1104,7 +989,7 @@ const saveUserNotes = async (appt: any) => {
             <div class="mt-3 flex items-start gap-2">
               <input 
                 type="checkbox" 
-                v-model="questionnaireForm.agreedToTerms" 
+                v-model="questionnaireForm.agreed_to_terms" 
                 :disabled="questionnaireData && questionnaireData.agreed_to_terms === 1"
                 class="mt-1 w-4 h-4 text-[#154337] focus:ring-[#154337] rounded border-gray-300"
               />
