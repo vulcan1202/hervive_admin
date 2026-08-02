@@ -62,7 +62,7 @@
         </NuxtLink>
         <NuxtLink to="/products" :class="getNavLinkClass('/products')" @click="closeSidebarOnMobile">
           <Icon name="mdi:flask-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">療程與產品</span>
+          <span v-if="!isCollapsed" class="text-sm font-medium">產品管理</span>
         </NuxtLink>
         <NuxtLink to="/courses" :class="getNavLinkClass('/courses')" @click="closeSidebarOnMobile">
           <Icon name="mdi:account-group-outline" class="text-[20px] min-w-[20px]" />
