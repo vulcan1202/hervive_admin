@@ -11,22 +11,22 @@ const todayAppointmentsCount = ref(0)
 const totalInventoryValue = ref(0)
 const isLoading = ref(true)
 
-// 卡片夾互動狀態
+// 卡片夾互動狀態 (Motion Intensity 5: 增強 3D 層疊彈性體感)
 const activeIndex = ref(0)
 const nextCard = () => {
-  // 點擊後，切換下一張成為最上層
   activeIndex.value = (activeIndex.value + 1) % cards.value.length
 }
 
-// 將 4 張卡片結構化，綁定即時資料
+// 4 張數據卡片結構
 const cards = computed(() => [
   {
     id: 'revenue',
     title: '本月實質履約營收',
     value: `NT$ ${currentMonthRevenue.value.toLocaleString()}`,
-    sub: '已扣除耗用與退款',
+    sub: '已扣除耗用與退款認列',
     icon: 'mdi:cash-check',
-    color: 'green'
+    badge: '營收亮點',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
   },
   {
     id: 'pending',
@@ -34,53 +34,53 @@ const cards = computed(() => [
     value: `${pendingAppointmentsCount.value} 組`,
     sub: '本月內待服務與待點收',
     icon: 'mdi:calendar-clock',
-    color: 'purple'
+    badge: '待處理',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200'
   },
   {
     id: 'today',
     title: '本日新增預約筆數',
     value: `${todayAppointmentsCount.value} 筆`,
-    sub: '今日排程數量',
+    sub: '今日排程門市服務總數',
     icon: 'mdi:calendar-plus',
-    color: 'pink'
+    badge: '今日動態',
+    badgeColor: 'bg-rose-50 text-rose-700 border-rose-200'
   },
   {
     id: 'inventory',
-    title: '產品庫存總價值',
+    title: '產品庫存總成本價值',
     value: `NT$ ${totalInventoryValue.value.toLocaleString()}`,
-    sub: '現有商品庫存成本總額',
+    sub: '現有商品庫存資產總額',
     icon: 'mdi:package-variant-closed',
-    color: 'dark'
+    badge: '資產庫存',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200'
   }
 ])
 
-// 動態計算每張卡片在「卡片夾」中的層級與視覺偏移
+// 動態計算每張卡片在「卡片夾」中的層級與 3D 視覺偏移 (Variance 6 / Motion 5 彈簧物理)
 const getCardStyle = (originalIndex: number) => {
   const total = cards.value.length
-  // 計算相對偏移量：0 為最上層，1 為第二層... 3 為被洗去後面的那層
   const offset = (originalIndex - activeIndex.value + total) % total
   
   if (offset === total - 1) {
-    // 特效：剛被點擊換掉的最上層卡片，向上飛出並淡出
     return {
       zIndex: 0,
-      transform: `translateY(-40px) scale(1.05)`,
+      transform: `translateY(-55px) rotate(-4deg) scale(0.96)`,
       opacity: 0,
-      transition: 'all 0.4s ease'
+      transition: 'all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)'
     }
   }
 
   return {
-    zIndex: total - offset, // 最上層 z-index 最大
-    transform: `translateY(${offset * 18}px) scale(${1 - offset * 0.04})`, // 越下層越低、越小
-    opacity: 1 - (offset * 0.15), // 越下層越透明
-    boxShadow: offset === 0 ? '0 12px 32px rgba(0,0,0,0.12)' : '0 4px 10px rgba(0,0,0,0.05)',
-    transition: 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)'
+    zIndex: total - offset,
+    transform: `translateY(${offset * 22}px) rotate(${offset * -1.5}deg) scale(${1 - offset * 0.05})`,
+    opacity: 1 - (offset * 0.18),
+    boxShadow: offset === 0 ? '0 16px 36px -8px rgba(21, 67, 55, 0.18)' : '0 4px 12px rgba(0,0,0,0.04)',
+    transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
   }
 }
 
 onMounted(async () => {
-  // 精準計算台灣時間 (UTC+8) 的今天與本月區間
   const today = new Date()
   const tzOffset = 8 * 60
   const localToday = new Date(today.getTime() + tzOffset * 60000)
@@ -95,20 +95,17 @@ onMounted(async () => {
   const monthEnd = lastDayObj.toISOString().split('T')[0]
 
   try {
-    // 平行發送三大 API 請求
     const [finRes, apptRes, prodRes] = await Promise.all([
       fetch(`${backendUrl}/api/financial-summary?start_date=${monthStart}&end_date=${monthEnd}`),
       fetch(`${backendUrl}/api/appointments`),
       fetch(`${backendUrl}/api/products`)
     ])
 
-    // 1. 處理營收資料
     if (finRes.ok) {
       const finData = await finRes.json()
       currentMonthRevenue.value = finData.data?.revenue_recognition?.total_recognized_revenue || 0
     }
 
-    // 2. 處理預約資料
     if (apptRes.ok) {
       const apptData = await apptRes.json()
       const appts = apptData.data || []
@@ -121,7 +118,6 @@ onMounted(async () => {
       todayAppointmentsCount.value = appts.filter((a: any) => a.date === todayStr).length
     }
 
-    // 3. 處理產品庫存資料
     if (prodRes.ok) {
       const prodData = await prodRes.json()
       const prods = prodData.data || []
@@ -136,68 +132,137 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="dashboard-content">
+  <div class="max-w-6xl mx-auto space-y-8">
     
-    <!-- 頂部歡迎區塊 (已移除新增按鈕) -->
-    <div class="welcome-banner">
-      <div>
-        <h1>早安，Ava</h1>
-        <p>這裡是您目前的營運數據概覽。點擊卡片夾即可切換不同指標。</p>
+    <!-- 頂部歡迎區塊 (Variance 6: 雙色非對稱裝飾標籤) -->
+    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-[#154337]/10 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+      <div class="space-y-1 relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#154337]/10 text-[#154337] text-xs font-semibold tracking-wide">
+          <span class="w-2 h-2 rounded-full bg-[#154337] animate-ping"></span>
+          即時營運控制台 (6 / 5 / 7 視覺模式)
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337]">早安，系統管理員</h1>
+        <p class="text-xs sm:text-sm text-gray-500 max-w-xl">歡迎回到 Hervive 門市管理控制中心，點擊下方卡片疊層即可切換核心營運指標。</p>
+      </div>
+
+      <div class="hidden lg:flex items-center gap-3 shrink-0">
+        <NuxtLink to="/Appointment" class="px-5 py-2.5 rounded-2xl bg-[#154337] text-white text-xs font-bold hover:bg-[#0e2f27] transition shadow-xs flex items-center gap-2 cursor-pointer active:scale-95">
+          <Icon name="mdi:calendar-plus" class="text-base" />
+          <span>查看預約清單</span>
+        </NuxtLink>
       </div>
     </div>
 
-    <!-- 儀表板雙欄網格 -->
-    <div class="dashboard-grid">
+    <!-- 雙欄 Layout (Density 7: 高效雙欄) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       
-      <!-- 左側：資料卡片夾 -->
-      <div class="stack-section">
-        <div class="card-stack" @click="nextCard">
+      <!-- 左側：卡片夾互動區塊 (Variance 6 / Motion 5) -->
+      <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs flex flex-col items-center justify-center min-h-[380px] relative">
+        <div class="w-full flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">營運指標切換卡片</span>
+          <span class="text-xs text-[#154337] font-mono font-semibold">點擊卡片洗牌 &rarr;</span>
+        </div>
+
+        <div class="card-stack my-4" @click="nextCard">
           <div 
             v-for="(card, index) in cards" 
             :key="card.id" 
-            class="stat-card border-gradient" 
+            class="stat-card border border-[#154337]/20 p-1 bg-[#154337]/5" 
             :style="getCardStyle(index)"
           >
-            <div class="card-inner">
-              <div class="stat-header">
-                <span>{{ card.title }}</span>
-                <div :class="['icon-badge', card.color]">
-                  <Icon :name="card.icon" />
+            <div class="card-inner bg-white rounded-[calc(1.25rem-0.25rem)] p-6 flex flex-col justify-between h-full shadow-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-gray-500">{{ card.title }}</span>
+                <span :class="['px-2.5 py-0.5 rounded-full text-[10px] font-bold border', card.badgeColor]">
+                  {{ card.badge }}
+                </span>
+              </div>
+              
+              <div class="my-3">
+                <div v-if="isLoading" class="flex items-center gap-2 text-gray-400">
+                  <Icon name="mdi:loading" class="animate-spin text-2xl" />
+                  <span class="text-xs">數據計算中...</span>
+                </div>
+                <div v-else class="text-3xl font-extrabold text-[#154337] font-mono tracking-tight">
+                  {{ card.value }}
                 </div>
               </div>
               
-              <div class="stat-value">
-                <Icon v-if="isLoading" name="mdi:loading" class="animate-spin text-3xl text-[#154337]/50" />
-                <span v-else>{{ card.value }}</span>
+              <div class="text-xs text-gray-400 flex items-center justify-between border-t border-gray-100 pt-3">
+                <span>{{ card.sub }}</span>
+                <Icon name="mdi:chevron-right" class="text-base text-gray-300" />
               </div>
-              
-              <div class="stat-sub">{{ card.sub }}</div>
             </div>
           </div>
         </div>
-        
-        <p class="stack-hint">
-          <Icon name="mdi:gesture-tap" class="animate-pulse" /> 
-          點擊卡片洗牌切換
-        </p>
+
+        <div class="text-xs text-gray-400 mt-6 flex items-center gap-1.5 font-medium">
+          <Icon name="mdi:gesture-tap" class="animate-bounce text-[#154337] text-base" />
+          <span>點擊卡片體感洗牌切換指標</span>
+        </div>
       </div>
 
-      <!-- 右側：快捷操作 (保持不變) -->
-      <div class="quick-panel">
-        <h3>快捷操作</h3>
-        <div class="action-group">
-          <button class="action-btn ghost">
-            <Icon name="mdi:face-woman-shimmer-outline" />
-            客戶畫像分析
-          </button>
-          <button class="action-btn ghost">
-            <Icon name="mdi:chart-bell-curve-cumulative" />
-            療程效果對比
-          </button>
-          <button class="action-btn ghost">
-            <Icon name="mdi:robot-outline" />
-            AI 排程建議
-          </button>
+      <!-- 右側：快捷操作面板 (Motion 5: hover translate physics) -->
+      <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 class="font-bold text-[#154337] text-base">門市快捷導覽功能</h3>
+          <span class="text-xs text-gray-400 font-mono">Quick Actions</span>
+        </div>
+
+        <div class="space-y-3">
+          <NuxtLink 
+            to="/Appointment" 
+            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#154337] text-white flex items-center justify-center shadow-xs">
+                <Icon name="mdi:clipboard-text-clock-outline" class="text-xl" />
+              </div>
+              <div>
+                <div class="text-sm font-bold text-gray-900 group-hover:text-[#154337] transition">預約點收與簽到</div>
+                <div class="text-xs text-gray-400">處理到店顧客預約與課程扣堂</div>
+              </div>
+            </div>
+            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-[#154337] flex items-center justify-center text-gray-400 group-hover:text-[#154337] transition">
+              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
+            </div>
+          </NuxtLink>
+
+          <NuxtLink 
+            to="/settings" 
+            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                <Icon name="mdi:account-group-outline" class="text-xl" />
+              </div>
+              <div>
+                <div class="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition">美容師團隊管理</div>
+                <div class="text-xs text-gray-400">新增、編輯或維護駐店美容師清單</div>
+              </div>
+            </div>
+            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-purple-600 flex items-center justify-center text-gray-400 group-hover:text-purple-600 transition">
+              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
+            </div>
+          </NuxtLink>
+
+          <NuxtLink 
+            to="/analytics" 
+            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <Icon name="mdi:chart-timeline-variant-shimmer" class="text-xl" />
+              </div>
+              <div>
+                <div class="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition">數據洞察與營收報告</div>
+                <div class="text-xs text-gray-400">檢視實質履約營收與現金流量報告</div>
+              </div>
+            </div>
+            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-emerald-600 flex items-center justify-center text-gray-400 group-hover:text-emerald-600 transition">
+              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
+            </div>
+          </NuxtLink>
         </div>
       </div>
 
@@ -206,173 +271,21 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.dashboard-content {
-  max-width: 1200px;
-}
-
-.welcome-banner {
-  margin-bottom: 40px;
-}
-
-.welcome-banner h1 {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  color: #154337;
-}
-
-.welcome-banner p {
-  margin: 0;
-  color: #64748b;
-  font-size: 14px;
-}
-
-/* 雙欄排版設定 */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 40px;
-  align-items: start;
-}
-
-@media (max-width: 860px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-}
-
-/* 卡片夾外層容器設定 */
-.stack-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 .card-stack {
   position: relative;
   width: 100%;
-  max-width: 380px;
-  height: 200px; /* 預留卡片層疊展開的高度 */
+  max-width: 360px;
+  height: 200px;
   cursor: pointer;
   perspective: 1000px;
-  /* 防止點擊時出現選取高光 */
-  -webkit-tap-highlight-color: transparent;
-  user-select: none; 
+  user-select: none;
 }
 
-.stack-hint {
-  margin-top: 24px;
-  font-size: 12px;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-}
-
-/* 單張卡片設定 */
 .stat-card {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  border-radius: 16px;
-  padding: 2px; /* 漸層邊框厚度 */
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.4));
+  border-radius: 20px;
 }
-
-.card-inner {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 14px;
-  padding: 28px 24px;
-  height: 100%;
-}
-
-.stat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-}
-
-.icon-badge.green { background: #dcfce7; color: #16a34a; }
-.icon-badge.purple { background: #f3e8ff; color: #9333ea; }
-.icon-badge.pink { background: #fce7f3; color: #db2777; }
-.icon-badge.dark { background: #e2e8f0; color: #154337; }
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: #154337;
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
-}
-
-.stat-sub {
-  font-size: 13px;
-  color: #94a3b8;
-}
-
-/* 快捷操作面板 (延續原本風格) */
-.quick-panel {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  padding: 24px;
-  backdrop-filter: blur(8px);
-}
-
-.quick-panel h3 {
-  margin: 0 0 20px 0;
-  color: #154337;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.action-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: none;
-  font-weight: 600;
-}
-
-.action-btn.ghost {
-  background: #ffffff;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-}
-
-.action-btn.ghost:hover {
-  border-color: #154337;
-  color: #154337;
-  background: #f8fafc;
-  transform: translateX(4px);
-}
-</style>
+</style>

@@ -1,138 +1,214 @@
 <template>
   <div class="flex h-screen w-full bg-[#FAF4EE] font-sans text-gray-800 overflow-hidden box-border relative">
     
-    <!-- 手機版：側邊欄展開時的深色遮罩 -->
+    <!-- 手機版：側邊欄展開時的半透明深色遮罩 -->
     <div 
       v-if="!isCollapsed" 
-      class="fixed inset-0 bg-black/40 z-20 md:hidden transition-opacity"
+      class="fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity backdrop-blur-xs"
       @click="isCollapsed = true"
     ></div>
 
-    <!-- 側邊欄 -->
+    <!-- 側邊欄 (Obsidian-Emerald 奢華暗翡翠深色層次) -->
     <aside 
       :class="[
-        'bg-[#faf4ee] flex flex-col transition-all duration-300 shadow-[4px_0_15px_rgba(0,0,0,0.05)] z-30 shrink-0 h-full',
-        'absolute md:relative', // 手機版採絕對定位覆蓋，電腦版維持排版
-        isCollapsed ? '-translate-x-full md:translate-x-0 md:w-[72px]' : 'translate-x-0 w-[240px] md:w-[200px]' 
+        'bg-gradient-to-b from-[#11352a] via-[#0d2a21] to-[#091e17] flex flex-col transition-all duration-300 shadow-[6px_0_25px_rgba(0,0,0,0.12)] z-30 shrink-0 h-full border-r border-white/10 text-white',
+        'absolute md:relative', // 手機版絕對定位覆蓋，電腦版彈性排版
+        isCollapsed ? '-translate-x-full md:translate-x-0 md:w-[52px]' : 'translate-x-0 w-[250px] md:w-[230px]' 
       ]"
     >
-      <!-- 側邊欄頂部：手機版高度 60px，電腦版 72px -->
+      <!-- 側邊欄頂部 Logo 區 (保留奶茶色背景 #FAF4EE) -->
       <div 
         :class="[
-          'h-[60px] md:h-[72px] flex items-center justify-center gap-3 border-b border-black/10 bg-[#faf4ee] relative box-border',
-          isCollapsed ? 'px-2' : 'px-4'
+          'h-[64px] md:h-[72px] flex items-center justify-between border-b border-[#154337]/15 bg-[#FAF4EE] relative box-border transition-all',
+          isCollapsed ? 'px-1 justify-center' : 'px-4'
         ]"
       >
-        <!-- 品牌 Logo：手機版只要展開就顯示，電腦版依據 isCollapsed 顯示 -->
-        <img
-          v-if="!isCollapsed"
-          src="/hervive.png"
-          alt="Hervive 品牌標誌"
-          class="h-7 md:h-8 w-auto max-w-[120px] object-contain"
-        />
-        <div 
-          v-else 
-          class="hidden md:flex w-10 h-10 min-w-[40px] bg-[#154337]/5 rounded-lg items-center justify-center backdrop-blur-sm border border-[#154337]/10"
-        >
-          <Icon name="mdi:spa" class="text-[22px] text-[#154337]" />
-        </div>
+        <!-- 品牌 Logo -->
+        <NuxtLink to="/" class="flex items-center justify-center overflow-hidden group">
+          <img
+            v-if="!isCollapsed"
+            src="/hervive.png"
+            alt="Hervive 品牌標誌"
+            class="h-7 md:h-8 w-auto max-w-[135px] object-contain group-hover:scale-102 transition duration-200"
+          />
+          <div 
+            v-else 
+            class="hidden md:flex w-8 h-8 min-w-[32px] bg-[#154337] rounded-xl items-center justify-center text-white shadow-xs"
+          >
+            <Icon name="mdi:spa" class="text-[18px]" />
+          </div>
+        </NuxtLink>
         
-        <!-- 電腦版：縮放切換按鈕 (手機版已改由 Topbar 控制) -->
+        <!-- 電腦版：縮放切換按鈕 -->
         <button 
-          class="absolute -right-[15px] top-1/2 -translate-y-1/2 w-[30px] h-[30px] bg-white border border-gray-200 rounded-full hidden md:flex items-center justify-center cursor-pointer text-[#154337] shadow-sm transition-all hover:scale-110 hover:bg-gray-50 z-10" 
+          class="absolute -right-[12px] top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-[#154337]/20 rounded-full hidden md:flex items-center justify-center cursor-pointer text-[#154337] shadow-sm transition-all hover:scale-110 hover:bg-[#FAF4EE] z-10" 
           @click="isCollapsed = !isCollapsed"
+          :title="isCollapsed ? '展開側邊欄' : '收合側邊欄'"
         >
-          <Icon :name="isCollapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" />
+          <Icon :name="isCollapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" class="text-xs" />
         </button>
       </div>
       
-      <!-- 導航區 -->
-      <nav class="p-3 md:p-4 px-2 flex flex-col gap-1 bg-[#154337] flex-1 overflow-y-auto">
+      <!-- 導航選單區塊 -->
+      <nav class="p-3 px-2 flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
+        
+        <!-- 分組 1：核心營運 -->
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-3 pb-1 font-semibold">
+          核心營運 · CORE
+        </div>
+
         <NuxtLink to="/" :class="getNavLinkClass('/')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:view-dashboard-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">智能儀表盤</span>
+          <div :class="getIconWrapperClass('/')">
+            <Icon name="mdi:view-dashboard-outline" class="text-[19px]" />
+          </div>
+          <div v-if="!isCollapsed" class="flex-1 flex items-center justify-between overflow-hidden">
+            <span class="text-sm font-medium leading-tight">智能儀表盤</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 font-semibold">LIVE</span>
+          </div>
         </NuxtLink>
+        
         <NuxtLink to="/calendar" :class="getNavLinkClass('/calendar')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:clipboard-flow-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">休假與行事曆一覽</span>
+          <div :class="getIconWrapperClass('/calendar')">
+            <Icon name="mdi:calendar-month-outline" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">休假與行事曆</span>
         </NuxtLink>
+        
         <NuxtLink to="/Appointment" :class="getNavLinkClass('/Appointment')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:clipboard-flow-outline" class="text-[20px] min-w-[20px]" />
+          <div :class="getIconWrapperClass('/Appointment')">
+            <Icon name="mdi:clipboard-text-clock-outline" class="text-[19px]" />
+          </div>
           <span v-if="!isCollapsed" class="text-sm font-medium">預約管理</span>
         </NuxtLink>
+
+        <!-- 分組 2：業務與財務 -->
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-4 pb-1 font-semibold">
+          業務與財務 · FINANCE
+        </div>
+        <div v-else class="h-px bg-white/10 my-2"></div>
+
         <NuxtLink to="/products" :class="getNavLinkClass('/products')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:flask-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">產品管理</span>
+          <div :class="getIconWrapperClass('/products')">
+            <Icon name="mdi:package-variant-closed" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">產品與進銷存</span>
         </NuxtLink>
+        
         <NuxtLink to="/courses" :class="getNavLinkClass('/courses')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:account-group-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">課程設定</span>
+          <div :class="getIconWrapperClass('/courses')">
+            <Icon name="mdi:spa-outline" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">課程方案管理</span>
         </NuxtLink>
+
         <NuxtLink to="/finance" :class="getNavLinkClass('/finance')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:account-cash" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">財務管理</span>
+          <div :class="getIconWrapperClass('/finance')">
+            <Icon name="mdi:cash-register" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">財務收支明細</span>
         </NuxtLink>
+
         <NuxtLink to="/analytics" :class="getNavLinkClass('/analytics')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:chart-timeline-variant-shimmer" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">數據洞察</span>
+          <div :class="getIconWrapperClass('/analytics')">
+            <Icon name="mdi:chart-timeline-variant-shimmer" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">數據洞察報告</span>
         </NuxtLink>
-        
-        <div v-if="!isCollapsed" class="h-px bg-white/10 my-2 mx-1"></div>
-        
+
+        <!-- 分組 3：系統設定 -->
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-4 pb-1 font-semibold">
+          系統與團隊 · SETTINGS
+        </div>
+        <div v-else class="h-px bg-white/10 my-2"></div>
+
         <NuxtLink to="/settings" :class="getNavLinkClass('/settings')" @click="closeSidebarOnMobile">
-          <Icon name="mdi:cog-outline" class="text-[20px] min-w-[20px]" />
-          <span v-if="!isCollapsed" class="text-sm font-medium">系統設定</span>
+          <div :class="getIconWrapperClass('/settings')">
+            <Icon name="mdi:account-group-outline" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">美容師團隊管理</span>
         </NuxtLink>
       </nav>
+
+      <!-- 側邊欄底部：系統版本與在線狀態卡片 -->
+      <div v-if="!isCollapsed" class="p-3.5 bg-black/20 border-t border-white/10 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"></span>
+          <div class="flex flex-col text-left">
+            <span class="text-xs font-semibold text-emerald-200">Hervive Cloud D1</span>
+            <span class="text-[10px] font-mono text-white/40">系統已連線 v2.4</span>
+          </div>
+        </div>
+        <div class="text-[10px] font-mono text-white/30 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+          PRO
+        </div>
+      </div>
     </aside>
 
     <!-- 主內容區 -->
     <div class="flex-1 flex flex-col overflow-hidden bg-[#FAF4EE] min-w-0 relative z-10">
-      <!-- 頂部欄：手機版高度 60px 節省空間 -->
-      <header class="bg-white flex items-center justify-between px-3 sm:px-6 md:px-8 h-[60px] md:h-[72px] shrink-0 box-border border-b border-black/10">
-        <div class="flex items-center gap-2 sm:gap-3 text-gray-500 text-sm">
-          
+      <!-- 頂部列 (Frosted Glass 質感浮動頂欄) -->
+      <header class="bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 md:px-8 h-[64px] md:h-[72px] shrink-0 box-border border-b border-[#154337]/10 shadow-xs">
+        <div class="flex items-center gap-3 text-gray-500 text-sm">
           <!-- 手機版：漢堡選單按鈕 -->
           <button 
-            class="md:hidden flex items-center justify-center p-1.5 -ml-1 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+            class="md:hidden flex items-center justify-center p-2 text-gray-700 hover:bg-[#FAF4EE] rounded-xl transition cursor-pointer"
             @click="isCollapsed = !isCollapsed"
           >
-            <Icon name="mdi:menu" size="24" />
+            <Icon name="mdi:menu" size="22" />
           </button>
 
-          <!-- 麵包屑導航：極小螢幕隱藏 -->
-          <div class="hidden sm:flex items-center gap-2">
-            <Icon name="mdi:chevron-right" />
-            <span>首頁</span>
-            <Icon name="mdi:chevron-right" />
-            <span class="font-bold text-gray-700">智能儀表盤</span>
+          <!-- 動態麵包屑導航與頁面徽章 -->
+          <div class="flex items-center gap-2 text-xs sm:text-sm">
+            <span class="text-gray-400 hidden sm:inline-flex items-center gap-1 font-medium">
+              <Icon name="mdi:spa" class="text-[#154337]" />
+              Hervive 後台
+            </span>
+            <Icon name="mdi:chevron-right" class="text-gray-300 hidden sm:inline" />
+            <span class="inline-flex items-center gap-1.5 font-bold text-[#154337] bg-[#154337]/5 px-3 py-1 rounded-full border border-[#154337]/10">
+              <Icon name="mdi:circle" class="text-[8px] text-emerald-500" />
+              {{ currentPageTitle }}
+            </span>
           </div>
         </div>
         
-        <div class="flex items-center gap-3 sm:gap-5">
-          <div class="relative flex items-center hidden sm:flex">
-            <Icon name="mdi:magnify" class="absolute left-3 text-gray-400" />
+        <div class="flex items-center gap-3 sm:gap-4">
+          <!-- 全域搜尋列 (含 ⌘K 快捷鍵視覺標籤) -->
+          <div class="relative flex items-center hidden md:flex">
+            <Icon name="mdi:magnify" class="absolute left-3.5 text-gray-400 text-base" />
             <input 
               type="text" 
-              placeholder="搜尋療程、客戶..." 
-              class="bg-gray-100 border border-transparent py-1.5 pr-4 pl-9 rounded-md text-gray-800 outline-none transition-all duration-300 focus:border-purple-500 focus:ring-[3px] focus:ring-purple-500/10 focus:bg-white text-sm" 
+              placeholder="搜尋預約、會員或產品..." 
+              class="bg-[#FAF4EE]/70 border border-[#154337]/10 py-1.5 pr-12 pl-10 rounded-full text-gray-800 outline-none transition-all duration-200 focus:border-[#154337] focus:ring-2 focus:ring-[#154337]/10 focus:bg-white text-xs sm:text-sm w-[220px] lg:w-[280px]" 
             />
+            <div class="absolute right-3 px-1.5 py-0.5 text-[10px] font-mono bg-white text-gray-400 rounded-md border border-gray-200 pointer-events-none shadow-2xs">
+              ⌘K
+            </div>
           </div>
-          
-          <button class="relative bg-transparent border-none text-gray-500 cursor-pointer text-[22px] transition-colors hover:text-[#154337]">
-            <Icon name="mdi:bell-outline" />
-            <span class="absolute top-0.5 right-0.5 w-2 h-2 bg-pink-500 rounded-full shadow-[0_0_8px_#ec4899]"></span>
+
+          <!-- 通知按鈕 -->
+          <button 
+            class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95"
+            title="通知中心"
+          >
+            <Icon name="mdi:bell-outline" class="text-xl" />
+            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
           </button>
-          
-          <div class="flex items-center gap-2 py-1 pr-2 sm:pr-3 pl-1 sm:pl-1.5 bg-gray-100 rounded-full cursor-pointer transition-colors hover:bg-gray-200">
-            <div class="w-6 h-6 sm:w-7 sm:h-7 bg-[#154337] rounded-full flex items-center justify-center text-xs font-bold text-white">A</div>
-            <span class="text-xs sm:text-sm font-medium hidden sm:block">Ava</span>
-            <Icon name="mdi:chevron-down" class="text-gray-500 hidden sm:block" />
+
+          <!-- 管理員 Avatar -->
+          <div class="flex items-center gap-2.5 py-1 pr-3 pl-1.5 bg-[#FAF4EE] border border-[#154337]/10 rounded-full cursor-pointer hover:border-[#154337]/30 transition group">
+            <div class="w-7 h-7 bg-[#154337] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs group-hover:scale-105 transition">
+              H
+            </div>
+            <div class="hidden sm:flex flex-col text-left">
+              <span class="text-xs font-semibold text-gray-800 leading-tight">系統管理員</span>
+              <span class="text-[10px] text-emerald-700 font-mono">Store Admin</span>
+            </div>
           </div>
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+      <!-- 主要內容區 -->
+      <main class="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
         <NuxtPage />
       </main>
     </div>
@@ -140,19 +216,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const isCollapsed = ref(false)
 
-// 生命週期：如果是手機螢幕載入，預設將側邊欄收起
+const routeTitleMap = {
+  '/': '智能儀表盤',
+  '/calendar': '休假與行事曆一覽',
+  '/Appointment': '預約管理列表',
+  '/products': '產品與進銷存管理',
+  '/courses': '課程方案與會員包堂',
+  '/finance': '財務收支與營收認列',
+  '/analytics': '數據洞察商業報告',
+  '/settings': '系統與美容師團隊管理'
+}
+
+const currentPageTitle = computed(() => {
+  return routeTitleMap[route.path] || '管理控制台'
+})
+
 onMounted(() => {
   if (window.innerWidth < 768) {
     isCollapsed.value = true
   }
 })
 
-// 當手機版點擊導航連結時，自動關閉側邊欄
 const closeSidebarOnMobile = () => {
   if (window.innerWidth < 768) {
     isCollapsed.value = true
@@ -161,13 +251,37 @@ const closeSidebarOnMobile = () => {
 
 const getNavLinkClass = (path) => {
   const isActive = route.path === path
-  const baseClass = 'flex items-center gap-3 py-2.5 rounded-lg transition-all duration-200 whitespace-nowrap overflow-hidden relative'
-  const paddingClass = isCollapsed.value ? 'justify-center px-2' : 'px-3'
+  const baseClass = 'flex items-center transition-all duration-200 whitespace-nowrap overflow-hidden relative group'
+  const paddingClass = isCollapsed.value ? 'justify-center px-1 py-2 gap-0' : 'px-3 py-2 gap-3'
   
   const activeClass = isActive
-    ? 'text-white bg-gradient-to-r from-white/15 to-white/5 before:content-[\'\'] before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-[3px] before:bg-white before:rounded-r-sm before:shadow-[0_0_8px_rgba(255,255,255,0.4)]'
-    : 'text-white/60 hover:text-white hover:bg-white/10'
+    ? 'text-white bg-white/15 font-semibold ring-1 ring-white/20 shadow-xs before:content-[\'\'] before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-1 before:bg-emerald-400 before:rounded-r-full'
+    : 'text-white/70 hover:text-white hover:bg-white/10'
 
   return `${baseClass} ${paddingClass} ${activeClass}`
 }
+
+const getIconWrapperClass = (path) => {
+  const isActive = route.path === path
+  const sizeClass = isCollapsed.value ? 'w-7 h-7 rounded-lg text-sm' : 'w-8 h-8 rounded-xl text-[19px]'
+  return isActive
+    ? `${sizeClass} bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center justify-center shrink-0 shadow-inner scale-105 transition duration-200`
+    : `${sizeClass} bg-transparent text-white/70 flex items-center justify-center shrink-0 group-hover:text-white group-hover:scale-105 transition duration-200`
+}
 </script>
+
+<style>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+</style>
