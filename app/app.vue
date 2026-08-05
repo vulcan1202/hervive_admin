@@ -8,10 +8,10 @@
       @click="isCollapsed = true"
     ></div>
 
-    <!-- 側邊欄 (Obsidian-Emerald 奢華暗翡翠深色層次) -->
+    <!-- 側邊欄 (Hervive 品牌翡翠綠 #154337) -->
     <aside 
       :class="[
-        'bg-gradient-to-b from-[#11352a] via-[#0d2a21] to-[#091e17] flex flex-col transition-all duration-300 shadow-[6px_0_25px_rgba(0,0,0,0.12)] z-30 shrink-0 h-full border-r border-white/10 text-white',
+        'bg-[#154337] flex flex-col transition-all duration-300 shadow-[4px_0_20px_rgba(21,67,55,0.1)] z-30 shrink-0 h-full border-r border-white/10 text-white',
         'absolute md:relative', // 手機版絕對定位覆蓋，電腦版彈性排版
         isCollapsed ? '-translate-x-full md:translate-x-0 md:w-[52px]' : 'translate-x-0 w-[250px] md:w-[230px]' 
       ]"
@@ -53,7 +53,7 @@
       <nav class="p-3 px-2 flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
         
         <!-- 分組 1：核心營運 -->
-        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-3 pb-1 font-semibold">
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-white/45 px-3.5 pt-3 pb-1 font-semibold">
           核心營運 · CORE
         </div>
 
@@ -82,7 +82,7 @@
         </NuxtLink>
 
         <!-- 分組 2：業務與財務 -->
-        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-4 pb-1 font-semibold">
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-white/45 px-3.5 pt-4 pb-1 font-semibold">
           業務與財務 · FINANCE
         </div>
         <div v-else class="h-px bg-white/10 my-2"></div>
@@ -116,7 +116,7 @@
         </NuxtLink>
 
         <!-- 分組 3：系統設定 -->
-        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-emerald-400/50 px-3.5 pt-4 pb-1 font-semibold">
+        <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-white/45 px-3.5 pt-4 pb-1 font-semibold">
           系統與團隊 · SETTINGS
         </div>
         <div v-else class="h-px bg-white/10 my-2"></div>

@@ -126,294 +126,359 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto space-y-6">
-    <!-- 頂部頁面標題與日期選擇器 -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#154337]/10 text-[#154337] tracking-wider uppercase">Business Intelligence</span>
-          <h1 class="text-2xl font-bold text-[#154337]">數據洞察與營運分析報告</h1>
+  <div class="max-w-7xl mx-auto space-y-6 pb-12">
+    
+    <!-- 1. 頂部抬頭與日期選擇器 (Double-Bezel 7/5/8 高奢與跨端適配) -->
+    <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
+      <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
+              Business Intelligence
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337] tracking-tight font-serif">
+            數據洞察與營運分析報告
+          </h1>
+          <p class="text-gray-500 text-xs sm:text-sm mt-0.5">
+            追蹤實質營收認列、現金流狀況、預約完成率與庫存資產分配
+          </p>
         </div>
-        <p class="text-xs sm:text-sm text-gray-500 mt-1">追蹤實質營收認列、現金流狀況、預約完成率與庫存資產分配</p>
-      </div>
 
-      <!-- 日期區間過濾控制項 -->
-      <div class="flex flex-wrap items-center gap-2 bg-[#FAF4EE] p-1.5 rounded-2xl border border-[#154337]/10">
-        <button 
-          @click="setPresetRange('month')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer',
-            selectedPreset === 'month' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
-          ]"
-        >
-          本月
-        </button>
-        <button 
-          @click="setPresetRange('quarter')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer',
-            selectedPreset === 'quarter' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
-          ]"
-        >
-          本季
-        </button>
-        <button 
-          @click="setPresetRange('year')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer',
-            selectedPreset === 'year' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
-          ]"
-        >
-          本年度
-        </button>
+        <!-- 響應式日期區間選擇器 -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#FAF4EE]/70 p-2 sm:p-1.5 rounded-2xl border border-[#154337]/10 w-full xl:w-auto">
+          <!-- 快捷天數切換按鈕組 -->
+          <div class="grid grid-cols-3 gap-1.5 sm:flex sm:items-center">
+            <button 
+              @click="setPresetRange('month')"
+              :class="[
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
+                selectedPreset === 'month' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+              ]"
+            >
+              本月
+            </button>
+            <button 
+              @click="setPresetRange('quarter')"
+              :class="[
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
+                selectedPreset === 'quarter' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+              ]"
+            >
+              本季
+            </button>
+            <button 
+              @click="setPresetRange('year')"
+              :class="[
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
+                selectedPreset === 'year' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+              ]"
+            >
+              本年度
+            </button>
+          </div>
 
-        <div class="h-4 w-px bg-[#154337]/20 mx-1"></div>
+          <div class="hidden sm:block h-4 w-px bg-[#154337]/20 mx-1"></div>
 
-        <div class="flex items-center gap-1.5 text-xs text-gray-600 px-2">
-          <input 
-            v-model="startDate"
-            type="date"
-            class="bg-white border border-[#154337]/20 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#154337]"
-            @change="selectedPreset = 'custom'; fetchAnalyticsData()"
-          />
-          <span>至</span>
-          <input 
-            v-model="endDate"
-            type="date"
-            class="bg-white border border-[#154337]/20 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#154337]"
-            @change="selectedPreset = 'custom'; fetchAnalyticsData()"
-          />
+          <!-- 自訂起訖日期選擇框 -->
+          <div class="flex items-center gap-1.5 text-xs text-gray-600 px-1 sm:px-2">
+            <input 
+              v-model="startDate"
+              type="date"
+              class="flex-1 sm:flex-none bg-white border border-[#154337]/20 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-[#154337] font-mono text-gray-800"
+              @change="selectedPreset = 'custom'; fetchAnalyticsData()"
+            />
+            <span class="text-xs text-gray-400 font-bold">至</span>
+            <input 
+              v-model="endDate"
+              type="date"
+              class="flex-1 sm:flex-none bg-white border border-[#154337]/20 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-[#154337] font-mono text-gray-800"
+              @change="selectedPreset = 'custom'; fetchAnalyticsData()"
+            />
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 4 大核心 KPI 統計卡片 -->
+    <!-- 2. 4 大核心 KPI 統計卡片 (Double-Bezel 7/5/8 高視覺密度) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- 總認列營收 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs relative overflow-hidden group hover:border-[#154337]/30 transition duration-300">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-400">當期實質履約營收</span>
-          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <Icon name="mdi:cash-check" class="text-xl" />
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">當期實質履約營收</span>
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+              <Icon name="mdi:cash-check" class="text-xl" />
+            </div>
           </div>
-        </div>
-        <div class="mt-4">
-          <div class="text-2xl lg:text-3xl font-extrabold text-[#154337] font-mono">
-            NT$ {{ totalRecognizedRevenue.toLocaleString() }}
+          <div class="mt-3 sm:mt-4">
+            <div class="text-xl sm:text-2xl lg:text-3xl font-black text-[#154337] font-mono tracking-tight">
+              NT$ {{ totalRecognizedRevenue.toLocaleString() }}
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">來自課程消耗與產品實際販售認列</p>
           </div>
-          <p class="text-[11px] text-gray-400 mt-1">來自課程消耗與產品實際販售認列</p>
         </div>
       </div>
 
       <!-- 現金淨流入 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs relative overflow-hidden group hover:border-[#154337]/30 transition duration-300">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-400">當期現金淨流入 (Net Cash)</span>
-          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <Icon name="mdi:swap-horizontal" class="text-xl" />
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">當期現金淨流入 (Net Cash)</span>
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-200">
+              <Icon name="mdi:swap-horizontal" class="text-xl" />
+            </div>
           </div>
-        </div>
-        <div class="mt-4">
-          <div :class="['text-2xl lg:text-3xl font-extrabold font-mono', netCashFlow >= 0 ? 'text-emerald-700' : 'text-rose-600']">
-            NT$ {{ netCashFlow.toLocaleString() }}
-          </div>
-          <div class="flex items-center gap-2 text-[11px] text-gray-500 mt-1">
-            <span class="text-emerald-600">收 +{{ totalIncome.toLocaleString() }}</span>
-            <span>/</span>
-            <span class="text-rose-500">支 -{{ totalExpense.toLocaleString() }}</span>
+          <div class="mt-3 sm:mt-4">
+            <div :class="['text-xl sm:text-2xl lg:text-3xl font-black font-mono tracking-tight', netCashFlow >= 0 ? 'text-emerald-700' : 'text-rose-600']">
+              NT$ {{ netCashFlow.toLocaleString() }}
+            </div>
+            <div class="flex items-center gap-2 text-[11px] font-mono mt-1">
+              <span class="text-emerald-700 font-bold">收 +{{ totalIncome.toLocaleString() }}</span>
+              <span class="text-gray-300">/</span>
+              <span class="text-rose-600 font-bold">支 -{{ totalExpense.toLocaleString() }}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 預約完成率 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs relative overflow-hidden group hover:border-[#154337]/30 transition duration-300">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-400">預約履約完成率</span>
-          <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-            <Icon name="mdi:calendar-check-outline" class="text-xl" />
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">預約履約完成率</span>
+            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
+              <Icon name="mdi:calendar-check-outline" class="text-xl" />
+            </div>
           </div>
-        </div>
-        <div class="mt-4">
-          <div class="text-2xl lg:text-3xl font-extrabold text-[#154337] font-mono">
-            {{ appointmentMetrics.rate }}<span class="text-base font-normal text-gray-400">%</span>
+          <div class="mt-3 sm:mt-4">
+            <div class="text-xl sm:text-2xl lg:text-3xl font-black text-[#154337] font-mono tracking-tight">
+              {{ appointmentMetrics.rate }}<span class="text-base font-normal text-gray-400">%</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">共 {{ appointmentMetrics.total }} 組預約 (已完成 {{ appointmentMetrics.completed }} 組)</p>
           </div>
-          <p class="text-[11px] text-gray-400 mt-1">共 {{ appointmentMetrics.total }} 組預約 (已完成 {{ appointmentMetrics.completed }} 組)</p>
         </div>
       </div>
 
       <!-- 庫存資產總值 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs relative overflow-hidden group hover:border-[#154337]/30 transition duration-300">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-gray-400">當前商品庫存成本價值</span>
-          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <Icon name="mdi:package-variant" class="text-xl" />
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">當前商品庫存成本價值</span>
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+              <Icon name="mdi:package-variant" class="text-xl" />
+            </div>
           </div>
-        </div>
-        <div class="mt-4">
-          <div class="text-2xl lg:text-3xl font-extrabold text-[#154337] font-mono">
-            NT$ {{ totalInventoryValue.toLocaleString() }}
+          <div class="mt-3 sm:mt-4">
+            <div class="text-xl sm:text-2xl lg:text-3xl font-black text-[#154337] font-mono tracking-tight">
+              NT$ {{ totalInventoryValue.toLocaleString() }}
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">共有 {{ products.length }} 項庫存商品品項</p>
           </div>
-          <p class="text-[11px] text-gray-400 mt-1">共有 {{ products.length }} 項庫存商品品項</p>
         </div>
       </div>
     </div>
 
-    <!-- 雙欄分析圖表區 -->
+    <!-- 3. 雙欄分析圖表區 (Double-Bezel 響應式雙欄) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- 營收結構拆解 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs space-y-5">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <div class="flex items-center gap-2">
-            <Icon name="mdi:chart-pie" class="text-xl text-[#154337]" />
-            <h3 class="font-bold text-gray-900 text-base">當期營收來源拆解</h3>
-          </div>
-          <span class="text-xs font-mono text-gray-400">Revenue Breakdown</span>
-        </div>
-
-        <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
-          <Icon name="mdi:loading" class="animate-spin text-2xl" />
-        </div>
-
-        <div v-else class="space-y-4">
-          <!-- 課程消耗營收 -->
-          <div class="space-y-1.5">
-            <div class="flex justify-between text-xs font-medium">
-              <span class="text-gray-700 flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-[#154337]"></span>
-                會員包堂與課程消耗認列
-              </span>
-              <span class="font-bold text-[#154337] font-mono">NT$ {{ courseRevenue.toLocaleString() }}</span>
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 space-y-5">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+              <Icon name="mdi:chart-pie" class="text-xl text-[#154337]" />
+              <h3 class="font-bold text-gray-900 text-base font-serif">當期營收來源拆解</h3>
             </div>
-            <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-[#154337] transition-all duration-500"
-                :style="{ width: `${totalRecognizedRevenue > 0 ? (courseRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
-              ></div>
-            </div>
+            <span class="text-xs font-mono text-gray-400">Revenue Breakdown</span>
           </div>
 
-          <!-- 產品銷售營收 -->
-          <div class="space-y-1.5">
-            <div class="flex justify-between text-xs font-medium">
-              <span class="text-gray-700 flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                零售產品直接銷售認列
-              </span>
-              <span class="font-bold text-[#154337] font-mono">NT$ {{ productRevenue.toLocaleString() }}</span>
-            </div>
-            <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-emerald-500 transition-all duration-500"
-                :style="{ width: `${totalRecognizedRevenue > 0 ? (productRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
-              ></div>
-            </div>
+          <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
+            <Icon name="mdi:loading" class="animate-spin text-2xl" />
           </div>
 
-          <div class="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4 text-center">
-            <div class="p-3 rounded-2xl bg-[#FAF4EE]/60">
-              <div class="text-[11px] text-gray-400">課程佔比</div>
-              <div class="text-lg font-bold text-[#154337] font-mono mt-0.5">
-                {{ totalRecognizedRevenue > 0 ? Math.round((courseRevenue / totalRecognizedRevenue) * 100) : 0 }}%
-              </div>
-            </div>
-            <div class="p-3 rounded-2xl bg-emerald-50/50">
-              <div class="text-[11px] text-gray-400">產品佔比</div>
-              <div class="text-lg font-bold text-emerald-700 font-mono mt-0.5">
-                {{ totalRecognizedRevenue > 0 ? Math.round((productRevenue / totalRecognizedRevenue) * 100) : 0 }}%
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 現金收支類別分佈 -->
-      <div class="p-6 bg-white rounded-3xl border border-[#154337]/10 shadow-xs space-y-5">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <div class="flex items-center gap-2">
-            <Icon name="mdi:cash-fast" class="text-xl text-[#154337]" />
-            <h3 class="font-bold text-gray-900 text-base">現金交易流向分析</h3>
-          </div>
-          <span class="text-xs font-mono text-gray-400">Cash Flow Distribution</span>
-        </div>
-
-        <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
-          <Icon name="mdi:loading" class="animate-spin text-2xl" />
-        </div>
-
-        <div v-else class="space-y-4">
-          <!-- 收入項目 -->
-          <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-2">
-            <div class="flex justify-between items-center text-xs font-semibold text-emerald-800">
-              <span class="flex items-center gap-1.5">
-                <Icon name="mdi:arrow-down-bold-circle-outline" class="text-base text-emerald-600" />
-                現金總收入
-              </span>
-              <span class="font-mono text-sm">NT$ {{ totalIncome.toLocaleString() }}</span>
-            </div>
-            <p class="text-[11px] text-emerald-600/80">包含門市現場現金、LINE Pay、刷卡與匯款之當期實際入帳</p>
-          </div>
-
-          <!-- 支出項目 -->
-          <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-100 space-y-2">
-            <div class="flex justify-between items-center text-xs font-semibold text-rose-800">
-              <span class="flex items-center gap-1.5">
-                <Icon name="mdi:arrow-up-bold-circle-outline" class="text-base text-rose-600" />
-                現金總支出
-              </span>
-              <span class="font-mono text-sm">NT$ {{ totalExpense.toLocaleString() }}</span>
-            </div>
-            <p class="text-[11px] text-rose-600/80">包含店面租金、進貨成本、水電雜支與人員行政提撥</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 近期營收認列日誌明細表 -->
-    <div class="bg-white rounded-3xl border border-[#154337]/10 p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between border-b border-gray-100 pb-4">
-        <div class="flex items-center gap-2">
-          <Icon name="mdi:file-document-outline" class="text-xl text-[#154337]" />
-          <h3 class="font-bold text-gray-900 text-base">當期營收認列交易紀錄明細</h3>
-        </div>
-        <NuxtLink to="/finance" class="text-xs text-[#154337] hover:underline font-medium">查看完整財務明細 &rarr;</NuxtLink>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead>
-            <tr class="bg-[#FAF4EE] text-gray-600 rounded-xl">
-              <th class="py-3 px-4 rounded-l-xl">交易日期</th>
-              <th class="py-3 px-4">營收來源類型</th>
-              <th class="py-3 px-4">客戶編號</th>
-              <th class="py-3 px-4">備註說明</th>
-              <th class="py-3 px-4 text-right rounded-r-xl">認列金額</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            <tr v-if="revenueRecognitions.length === 0">
-              <td colspan="5" class="py-8 text-center text-gray-400">當前區間尚無營收認列紀錄</td>
-            </tr>
-            <tr v-for="r in revenueRecognitions.slice(0, 8)" :key="r.id" class="hover:bg-gray-50/80 transition">
-              <td class="py-3 px-4 font-mono text-gray-600">{{ r.date }}</td>
-              <td class="py-3 px-4">
-                <span 
-                  :class="[
-                    'px-2.5 py-0.5 rounded-full text-[10px] font-semibold inline-block',
-                    r.source_type === 'course_usage' ? 'bg-[#154337]/10 text-[#154337]' : 'bg-emerald-100 text-emerald-800'
-                  ]"
-                >
-                  {{ r.source_type === 'course_usage' ? '課程耗用認列' : '產品銷售認列' }}
+          <div v-else class="space-y-4">
+            <!-- 課程消耗營收條 -->
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap justify-between text-xs font-medium gap-1">
+                <span class="text-gray-700 flex items-center gap-1.5 font-bold">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#154337]"></span>
+                  會員包堂與課程消耗認列
                 </span>
-              </td>
-              <td class="py-3 px-4 font-mono text-gray-500">#{{ r.user_id }}</td>
-              <td class="py-3 px-4 text-gray-700">{{ r.description || '-' }}</td>
-              <td class="py-3 px-4 text-right font-bold text-[#154337] font-mono text-sm">
-                NT$ {{ r.amount.toLocaleString() }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                <span class="font-bold text-[#154337] font-mono">NT$ {{ courseRevenue.toLocaleString() }}</span>
+              </div>
+              <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  class="h-full bg-[#154337] transition-all duration-500 rounded-full"
+                  :style="{ width: `${totalRecognizedRevenue > 0 ? (courseRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
+                ></div>
+              </div>
+            </div>
+
+            <!-- 產品銷售營收條 -->
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap justify-between text-xs font-medium gap-1">
+                <span class="text-gray-700 flex items-center gap-1.5 font-bold">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  零售產品直接銷售認列
+                </span>
+                <span class="font-bold text-[#154337] font-mono">NT$ {{ productRevenue.toLocaleString() }}</span>
+              </div>
+              <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  class="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                  :style="{ width: `${totalRecognizedRevenue > 0 ? (productRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
+                ></div>
+              </div>
+            </div>
+
+            <!-- 佔比分析格 -->
+            <div class="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 sm:gap-4 text-center">
+              <div class="p-3 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10">
+                <div class="text-[11px] text-gray-500 font-bold">課程佔比</div>
+                <div class="text-lg font-black text-[#154337] font-mono mt-0.5">
+                  {{ totalRecognizedRevenue > 0 ? Math.round((courseRevenue / totalRecognizedRevenue) * 100) : 0 }}%
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+                <div class="text-[11px] text-emerald-800 font-bold">產品佔比</div>
+                <div class="text-lg font-black text-emerald-700 font-mono mt-0.5">
+                  {{ totalRecognizedRevenue > 0 ? Math.round((productRevenue / totalRecognizedRevenue) * 100) : 0 }}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 現金交易流向分析 -->
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 space-y-5">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+              <Icon name="mdi:cash-fast" class="text-xl text-[#154337]" />
+              <h3 class="font-bold text-gray-900 text-base font-serif">現金交易流向分析</h3>
+            </div>
+            <span class="text-xs font-mono text-gray-400">Cash Flow Distribution</span>
+          </div>
+
+          <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
+            <Icon name="mdi:loading" class="animate-spin text-2xl" />
+          </div>
+
+          <div v-else class="space-y-4">
+            <!-- 收入項目 -->
+            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+              <div class="flex justify-between items-center text-xs sm:text-sm font-bold text-emerald-900">
+                <span class="flex items-center gap-1.5">
+                  <Icon name="mdi:arrow-down-bold-circle" class="text-lg text-emerald-600" />
+                  現金總收入
+                </span>
+                <span class="font-mono text-base font-black">NT$ {{ totalIncome.toLocaleString() }}</span>
+              </div>
+              <p class="text-[11px] text-emerald-700">包含門市現場現金、LINE Pay、刷卡與匯款之當期實際入帳</p>
+            </div>
+
+            <!-- 支出項目 -->
+            <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">
+              <div class="flex justify-between items-center text-xs sm:text-sm font-bold text-rose-900">
+                <span class="flex items-center gap-1.5">
+                  <Icon name="mdi:arrow-up-bold-circle" class="text-lg text-rose-600" />
+                  現金總支出
+                </span>
+                <span class="font-mono text-base font-black">NT$ {{ totalExpense.toLocaleString() }}</span>
+              </div>
+              <p class="text-[11px] text-rose-700">包含店面租金、進貨成本、水電雜支與人員行政提撥</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- 4. 當期營收認列交易紀錄明細 (Web 表格 / 手機卡片列表) -->
+    <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
+      <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div class="flex items-center gap-2">
+            <Icon name="mdi:file-document-outline" class="text-xl text-[#154337]" />
+            <h3 class="font-bold text-gray-900 text-base font-serif">當期營收認列交易紀錄明細</h3>
+          </div>
+          <NuxtLink to="/finance" class="text-xs text-[#154337] hover:underline font-bold flex items-center gap-1">
+            <span>完整財務明細</span>
+            <Icon name="mdi:chevron-right" size="14" />
+          </NuxtLink>
+        </div>
+
+        <!-- 手機版卡片列表 (Block on mobile) -->
+        <div class="block md:hidden space-y-3">
+          <div v-if="revenueRecognitions.length === 0" class="py-8 text-center text-gray-400 text-xs">
+            當前區間尚無營收認列紀錄
+          </div>
+          <div 
+            v-for="r in revenueRecognitions.slice(0, 8)" 
+            :key="r.id" 
+            class="bg-[#FAF4EE]/50 p-3.5 rounded-2xl border border-gray-200/80 flex flex-col gap-2"
+          >
+            <div class="flex justify-between items-start">
+              <span class="font-mono text-xs font-bold text-gray-500">{{ r.date }}</span>
+              <span 
+                :class="[
+                  'px-2.5 py-0.5 rounded-full text-[10px] font-bold border',
+                  r.source_type === 'course_usage' ? 'bg-[#154337]/10 text-[#154337] border-[#154337]/20' : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                ]"
+              >
+                {{ r.source_type === 'course_usage' ? '課程耗用認列' : '產品銷售認列' }}
+              </span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-gray-500 font-mono">客戶編號：#{{ r.user_id }}</span>
+              <span class="font-bold text-[#154337] font-mono text-sm">NT$ {{ r.amount.toLocaleString() }}</span>
+            </div>
+            <p v-if="r.description" class="text-[11px] text-gray-600 bg-white p-2 rounded-xl border border-gray-100">
+              {{ r.description }}
+            </p>
+          </div>
+        </div>
+
+        <!-- 桌機版數據表格 (Hidden on mobile) -->
+        <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-200">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-[#FAF4EE]/70 text-gray-600 font-mono uppercase">
+                <th class="py-3 px-4 font-bold">交易日期</th>
+                <th class="py-3 px-4 font-bold">營收來源類型</th>
+                <th class="py-3 px-4 font-bold">客戶編號</th>
+                <th class="py-3 px-4 font-bold">備註說明</th>
+                <th class="py-3 px-4 text-right font-bold">認列金額</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 bg-white">
+              <tr v-if="revenueRecognitions.length === 0">
+                <td colspan="5" class="py-8 text-center text-gray-400">當前區間尚無營收認列紀錄</td>
+              </tr>
+              <tr v-for="r in revenueRecognitions.slice(0, 8)" :key="r.id" class="hover:bg-[#FAF4EE]/40 transition">
+                <td class="py-3.5 px-4 font-mono text-gray-600">{{ r.date }}</td>
+                <td class="py-3.5 px-4">
+                  <span 
+                    :class="[
+                      'px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block',
+                      r.source_type === 'course_usage' ? 'bg-[#154337]/10 text-[#154337] border-[#154337]/20' : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    ]"
+                  >
+                    {{ r.source_type === 'course_usage' ? '課程耗用認列' : '產品銷售認列' }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 font-mono text-gray-500">#{{ r.user_id }}</td>
+                <td class="py-3.5 px-4 text-gray-700">{{ r.description || '-' }}</td>
+                <td class="py-3.5 px-4 text-right font-black text-[#154337] font-mono text-sm">
+                  NT$ {{ r.amount.toLocaleString() }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
-</template>
+</template>

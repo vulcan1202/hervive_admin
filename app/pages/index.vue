@@ -84,7 +84,7 @@ onMounted(async () => {
   const today = new Date()
   const tzOffset = 8 * 60
   const localToday = new Date(today.getTime() + tzOffset * 60000)
-  const todayStr = localToday.toISOString().split('T')[0]
+  const todayStr = localToday.toISOString().split('T')[0]!
   
   const year = localToday.getFullYear()
   const month = String(localToday.getMonth() + 1).padStart(2, '0')
@@ -92,7 +92,7 @@ onMounted(async () => {
   
   const nextMonth = new Date(year, localToday.getMonth() + 1, 1)
   const lastDayObj = new Date(nextMonth.getTime() - 86400000)
-  const monthEnd = lastDayObj.toISOString().split('T')[0]
+  const monthEnd = lastDayObj.toISOString().split('T')[0]!
 
   try {
     const [finRes, apptRes, prodRes] = await Promise.all([
@@ -139,10 +139,9 @@ onMounted(async () => {
       <div class="space-y-1 relative z-10">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#154337]/10 text-[#154337] text-xs font-semibold tracking-wide">
           <span class="w-2 h-2 rounded-full bg-[#154337] animate-ping"></span>
-          即時營運控制台 (6 / 5 / 7 視覺模式)
+          即時控制台
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337]">早安，系統管理員</h1>
-        <p class="text-xs sm:text-sm text-gray-500 max-w-xl">歡迎回到 Hervive 門市管理控制中心，點擊下方卡片疊層即可切換核心營運指標。</p>
       </div>
 
       <div class="hidden lg:flex items-center gap-3 shrink-0">
@@ -288,4 +287,4 @@ onMounted(async () => {
   right: 0;
   border-radius: 20px;
 }
-</style>
+</style>

@@ -15,7 +15,6 @@ const loading = ref(true)
 // ==========================================
 // 2. 集中管理 UI 與 Modal 狀態
 // ==========================================
-const showBeauticianModal = ref(false)
 const showClientModal = ref(false)
 const showQuestionnaireModal = ref(false)
 const showNoteModal = ref(false)
@@ -304,62 +303,7 @@ const isWeeklyOff = (dayIndex: number) => {
 }
 
 // ==========================================
-// 7. 美容師團隊管理模組
-// ==========================================
-const newBeauticianName = ref('')
-const editingBeauticianId = ref<number | null>(null)
-const editingBeauticianName = ref('')
-
-const addBeautician = async () => {
-  if (!newBeauticianName.value.trim()) return alert('請輸入美容師姓名！')
-  try {
-    const res = await fetch(`${backendUrl}/api/beauticians`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newBeauticianName.value.trim() })
-    })
-    if (!res.ok) throw new Error('新增美容師失敗')
-    newBeauticianName.value = ''
-    fetchBeauticians()
-  } catch (err: any) {
-    alert(err.message || '操作失敗')
-  }
-}
-
-const startEditBeautician = (b: any) => {
-  editingBeauticianId.value = b.id
-  editingBeauticianName.value = b.name
-}
-
-const saveEditBeautician = async (id: number) => {
-  if (!editingBeauticianName.value.trim()) return alert('名稱不可為空！')
-  try {
-    const res = await fetch(`${backendUrl}/api/beauticians`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, name: editingBeauticianName.value.trim() })
-    })
-    if (!res.ok) throw new Error('修改失敗')
-    editingBeauticianId.value = null
-    fetchBeauticians()
-  } catch (err: any) {
-    alert(err.message || '操作失敗')
-  }
-}
-
-const deleteBeautician = async (id: number, name: string) => {
-  if (!confirm(`確定要刪除美容師「${name}」嗎？`)) return
-  try {
-    const res = await fetch(`${backendUrl}/api/beauticians?id=${id}`, { method: 'DELETE' })
-    if (!res.ok) throw new Error('刪除失敗')
-    fetchBeauticians()
-  } catch (err: any) {
-    alert(err.message || '操作失敗')
-  }
-}
-
-// ==========================================
-// 8. 客戶詳情與問卷管理模組
+// 7. 客戶詳情與問卷管理模組
 // ==========================================
 const selectedClient = ref<any>(null)
 const questionnaireData = ref<any>(null)
@@ -455,7 +399,7 @@ const saveQuestionnaire = async () => {
 }
 
 // ==========================================
-// 9. 備註管理模組
+// 8. 備註管理模組
 // ==========================================
 const editingNoteAppt = ref<any>(null)
 const noteInput = ref('')
@@ -504,135 +448,265 @@ const saveUserNotes = async (appt: any) => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto space-y-6 pb-12">
     
-    <!-- 頂部抬頭區 -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 md:mb-8">
-      <div>
-        <h2 class="text-2xl md:text-3xl font-bold text-[#154337] title-serif mb-1 md:mb-2">行事曆排程管理</h2>
-        <p class="text-gray-500 text-xs md:text-sm">點擊日曆管理每日預約名單與休假設定</p>
-      </div>
-      <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full md:w-auto">
-        <button @click="showBeauticianModal = true" class="px-3 py-2.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-[#154337] text-white hover:bg-opacity-90 shadow-sm transition flex items-center justify-center gap-1.5">
-          <Icon name="mdi:account-group" size="18" />
-          美容師 ({{ beauticians.length }})
-        </button>
-        <button @click="refreshAllData" class="px-3 py-2.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-sm transition flex items-center justify-center gap-1.5">
-          <Icon name="mdi:refresh" size="18" :class="{ 'animate-spin': loading }" />
-          重新整理
-        </button>
-      </div>
-    </div>
-
-    <!-- 行事曆主體 -->
-    <div class="space-y-4 md:space-y-6 mb-8">
-      <!-- 固定公休設定 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+    <!-- 頂部抬頭區 (Double-Bezel 7/5/8 高奢氛圍) -->
+    <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
+      <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 class="font-bold text-[#154337] text-sm md:text-base">每週固定公休設定</h3>
-          <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">勾選的日子將自動套用至行事曆全天公休</p>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
+              Calendar & Schedules
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337] tracking-tight font-serif">
+            休假與行事曆排程
+          </h1>
+          <p class="text-gray-500 text-xs sm:text-sm mt-0.5">
+            點擊日曆管理每日預約名單、設定店家公休日與時段性休息
+          </p>
         </div>
-        <div class="flex flex-wrap gap-1.5 md:gap-2 w-full md:w-auto justify-between md:justify-start">
-          <label v-for="(day, index) in weekdays" :key="index" class="cursor-pointer relative">
-            <input type="checkbox" class="peer sr-only" :checked="isWeeklyOff(index)" @change="toggleWeeklyOff(index)" />
-            <div class="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full text-xs md:text-sm font-bold border-2 transition-all peer-checked:bg-[#154337] peer-checked:border-[#154337] peer-checked:text-white border-gray-200 text-gray-400 hover:border-[#154337]">
-              {{ day }}
-            </div>
-          </label>
+        
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            @click="refreshAllData" 
+            class="w-full md:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#154337] text-white hover:bg-[#11352a] active:scale-95 shadow-xs transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Icon name="mdi:refresh" size="18" :class="{ 'animate-spin': loading }" />
+            <span>重新整理資料</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 行事曆主體 (Double-Bezel 容器) -->
+    <div class="space-y-6">
+      <!-- 1. 每週固定公休設定卡片 -->
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl shadow-xs">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-[#154337] text-sm sm:text-base flex items-center gap-2">
+              <Icon name="mdi:calendar-sync" class="text-emerald-600 text-lg" />
+              每週固定公休設定
+            </h3>
+            <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+              勾選的星期將自動於月曆上標註為全天公休，禁止線上預約
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 w-full md:w-auto justify-between md:justify-start">
+            <label v-for="(day, index) in weekdays" :key="index" class="cursor-pointer relative">
+              <input type="checkbox" class="peer sr-only" :checked="isWeeklyOff(index)" @change="toggleWeeklyOff(index)" />
+              <div class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl text-xs sm:text-sm font-bold border-2 transition-all duration-200 peer-checked:bg-[#154337] peer-checked:border-[#154337] peer-checked:text-white peer-checked:shadow-sm border-gray-200 text-gray-400 hover:border-[#154337] hover:text-[#154337] active:scale-95">
+                {{ day }}
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 
-      <!-- 日曆 -->
-      <div class="bg-white rounded-2xl shadow-sm border border-[#C7CDCE] overflow-hidden">
-        <div class="flex justify-between items-center bg-gray-50 px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
-          <button @click="changeMonth(-1)" class="p-1.5 md:p-2 text-gray-500 hover:text-[#154337] hover:bg-white rounded-lg transition shadow-sm border border-transparent hover:border-gray-200">
-            <Icon name="mdi:chevron-left" size="22" />
-          </button>
-          <h3 class="text-base md:text-xl font-bold text-gray-800 tracking-wider">{{ currentYearMonth }}</h3>
-          <button @click="changeMonth(1)" class="p-1.5 md:p-2 text-gray-500 hover:text-[#154337] hover:bg-white rounded-lg transition shadow-sm border border-transparent hover:border-gray-200">
-            <Icon name="mdi:chevron-right" size="22" />
-          </button>
-        </div>
-        <div class="grid grid-cols-7 border-b border-gray-200 text-center bg-white">
-          <div v-for="day in weekdays" :key="day" class="py-2 md:py-3 text-[11px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">{{ day }}</div>
-        </div>
-        <div class="grid grid-cols-7 bg-gray-100 gap-px p-px">
-          <div v-for="(day, index) in calendarDays" :key="index" @click="openDayModal(day)" :class="['min-h-[70px] sm:min-h-[90px] md:min-h-[130px] bg-white p-1 md:p-2 transition relative group overflow-hidden', !day ? 'bg-gray-50/40 cursor-default pointer-events-none' : 'cursor-pointer hover:bg-gray-50/80', day && day.isOff ? 'bg-red-50/30' : '']">
-            <template v-if="day">
-              <div class="flex justify-between items-center mb-1">
-                <div :class="['text-xs md:text-xs font-bold w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full', day.isToday ? 'bg-[#154337] text-white shadow-sm' : 'text-gray-700']">{{ day.date }}</div>
-                <span v-if="day.isOff" class="hidden sm:inline-block text-[9px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold truncate max-w-[65px] md:max-w-[80px]">全天公休</span>
-                <!-- 桌機版顯示 -->
-                <span v-else-if="day.hasTimeOff" class="hidden sm:inline-block text-[9px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded font-bold truncate max-w-[65px] md:max-w-[80px]">
-                  {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
-                </span>
-              </div>
-              <div class="block sm:hidden mt-0.5">
-                <div v-if="day.isOff" class="text-[9px] text-red-600 font-bold bg-red-100/80 px-1 py-0.5 rounded text-center">公休</div>
-                <!-- 手機版顯示 -->
-                <div v-else-if="day.hasTimeOff" class="text-[9px] text-orange-700 font-bold bg-orange-100/80 px-1 py-0.5 rounded text-center truncate w-full">
-                  {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
+      <!-- 2. 月曆主體表格 -->
+      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs overflow-hidden">
+        <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] overflow-hidden">
+          
+          <!-- 月曆頂部月份導覽切換 -->
+          <div class="flex justify-between items-center bg-[#FAF4EE] px-4 sm:px-6 py-3.5 border-b border-[#154337]/10">
+            <button 
+              @click="changeMonth(-1)" 
+              class="p-2 text-[#154337] hover:bg-white rounded-xl transition duration-200 shadow-2xs border border-transparent hover:border-[#154337]/20 active:scale-95 cursor-pointer"
+            >
+              <Icon name="mdi:chevron-left" size="22" />
+            </button>
+            <div class="flex items-center gap-2">
+              <Icon name="mdi:calendar-month-outline" class="text-[#154337] text-xl" />
+              <h3 class="text-base sm:text-xl font-bold text-[#154337] tracking-wider font-serif">
+                {{ currentYearMonth }}
+              </h3>
+            </div>
+            <button 
+              @click="changeMonth(1)" 
+              class="p-2 text-[#154337] hover:bg-white rounded-xl transition duration-200 shadow-2xs border border-transparent hover:border-[#154337]/20 active:scale-95 cursor-pointer"
+            >
+              <Icon name="mdi:chevron-right" size="22" />
+            </button>
+          </div>
+
+          <!-- 星期欄頭 -->
+          <div class="grid grid-cols-7 border-b border-[#154337]/10 text-center bg-[#FAF4EE]/50">
+            <div v-for="day in weekdays" :key="day" class="py-2.5 text-xs font-bold text-[#154337]/70 uppercase tracking-wider">
+              星期{{ day }}
+            </div>
+          </div>
+
+          <!-- 日期網格 (Visual Density 8 密集高清晰排版) -->
+          <div class="grid grid-cols-7 bg-gray-200/60 gap-px">
+            <div 
+              v-for="(day, index) in calendarDays" 
+              :key="index" 
+              @click="openDayModal(day)" 
+              :class="[
+                'min-h-[75px] sm:min-h-[100px] md:min-h-[135px] bg-white p-1.5 sm:p-2 transition-all duration-200 relative group overflow-hidden', 
+                !day ? 'bg-gray-50/40 cursor-default pointer-events-none' : 'cursor-pointer hover:bg-[#FAF4EE]/60', 
+                day && day.isOff ? 'bg-rose-50/40' : ''
+              ]"
+            >
+              <template v-if="day">
+                <div class="flex justify-between items-center mb-1">
+                  <!-- 日期數字圓圈 -->
+                  <div 
+                    :class="[
+                      'text-xs font-bold w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-xl transition duration-200', 
+                      day.isToday ? 'bg-[#154337] text-white shadow-xs scale-105 font-black ring-2 ring-[#154337]/20' : 'text-gray-800 group-hover:text-[#154337]'
+                    ]"
+                  >
+                    {{ day.date }}
+                  </div>
+
+                  <!-- 狀態 Chip -->
+                  <span v-if="day.isOff" class="hidden sm:inline-block text-[10px] bg-rose-100 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md font-bold truncate max-w-[80px]">
+                    全天公休
+                  </span>
+                  <span v-else-if="day.hasTimeOff" class="hidden sm:inline-block text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold truncate max-w-[80px]">
+                    {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
+                  </span>
                 </div>
-                <div v-if="day.dayAppts && day.dayAppts.length > 0" class="mt-1 flex justify-center">
-                  <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full leading-none">{{ day.dayAppts.length }} 筆</span>
+
+                <!-- 手機版微型狀態標籤 -->
+                <div class="block sm:hidden mt-1">
+                  <div v-if="day.isOff" class="text-[9px] text-rose-700 font-bold bg-rose-100/90 px-1 py-0.5 rounded text-center">公休</div>
+                  <div v-else-if="day.hasTimeOff" class="text-[9px] text-amber-800 font-bold bg-amber-100/90 px-1 py-0.5 rounded text-center truncate">
+                    {{ getDayTimeOffDisplayText(day.dayTimeOffs) }}
+                  </div>
+                  <div v-if="day.dayAppts && day.dayAppts.length > 0" class="mt-1 flex justify-center">
+                    <span class="text-[9px] font-extrabold bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded-full border border-emerald-200 leading-none">
+                      {{ day.dayAppts.length }} 筆
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div v-if="day.dayAppts && day.dayAppts.length > 0" class="hidden sm:block space-y-1 mt-1 max-h-[90px] overflow-y-auto">
-                <div v-for="appt in day.dayAppts" :key="appt.id" :class="['text-[10px] p-1.5 rounded border leading-tight flex flex-col gap-0.5 shadow-2xs', appt.status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-900' : appt.status === 'pending' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-red-50 border-red-200 text-red-800 opacity-75']">
-                  <div class="font-bold truncate flex justify-between items-center"><span>{{ appt.start_time }} {{ appt.client_name }}</span></div>
-                  <div class="text-[9px] opacity-80 truncate flex items-center justify-between"><span>✂️ {{ appt.beautician_name || '未指派' }}</span></div>
+
+                <!-- 桌機版當日預約清單小卡片 (高視覺密度 8) -->
+                <div v-if="day.dayAppts && day.dayAppts.length > 0" class="hidden sm:block space-y-1 mt-1 max-h-[95px] overflow-y-auto custom-scrollbar">
+                  <div 
+                    v-for="appt in day.dayAppts" 
+                    :key="appt.id" 
+                    :class="[
+                      'text-[10px] p-1.5 rounded-xl border leading-tight flex flex-col gap-0.5 transition-all duration-150', 
+                      appt.status === 'confirmed' ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 font-medium' : 
+                      appt.status === 'pending' ? 'bg-amber-50/80 border-amber-200 text-amber-950 font-medium' : 
+                      'bg-rose-50/70 border-rose-200 text-rose-900 opacity-80'
+                    ]"
+                  >
+                    <div class="font-bold truncate flex justify-between items-center">
+                      <span>{{ appt.start_time }} {{ appt.client_name }}</span>
+                    </div>
+                    <div class="text-[9px] opacity-75 truncate flex items-center justify-between">
+                      <span>美容師：{{ appt.beautician_name || '未指派' }}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </template>
+              </template>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 行事曆彈窗 -->
-    <div v-if="showModal && selectedDay" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 sm:p-4 z-50">
-      <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden max-h-[90vh] relative">
-        <button @click="showModal = false" class="absolute top-3 right-3 z-20 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
-          <Icon name="mdi:close" size="22" />
+    <!-- 行事曆每日詳情彈窗 (Frosted Glass 奢華彈窗) -->
+    <div v-if="showModal && selectedDay" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end md:items-center justify-center p-0 sm:p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden max-h-[90vh] relative border border-white/20">
+        <!-- 關閉按鈕 -->
+        <button 
+          @click="showModal = false" 
+          class="absolute top-3.5 right-3.5 z-20 text-gray-400 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition cursor-pointer"
+        >
+          <Icon name="mdi:close" size="20" />
         </button>
-        <div class="flex border-b border-gray-200 md:hidden bg-white sticky top-0 z-10 pr-10">
-          <button @click="mobileModalTab = 'appts'" :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'appts' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']">📅 當日預約 ({{ selectedDayAppointments.length }})</button>
-          <button @click="mobileModalTab = 'holidays'" :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'holidays' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']">🏖️ 休假設定</button>
+
+        <!-- 手機版 Tab 切換槓 -->
+        <div class="flex border-b border-gray-200 md:hidden bg-white sticky top-0 z-10 pr-12">
+          <button 
+            @click="mobileModalTab = 'appts'" 
+            :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'appts' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']"
+          >
+            📅 當日預約 ({{ selectedDayAppointments.length }})
+          </button>
+          <button 
+            @click="mobileModalTab = 'holidays'" 
+            :class="['flex-1 py-3 text-xs font-bold border-b-2 transition text-center', mobileModalTab === 'holidays' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400']"
+          >
+            🏖️ 休假排程
+          </button>
         </div>
 
-        <div :class="['w-full md:w-1/2 bg-gray-50 p-4 sm:p-6 overflow-y-auto border-r border-gray-200', mobileModalTab === 'appts' ? 'block' : 'hidden md:block']">
-          <div class="flex items-center justify-between mb-4 md:mb-6">
-            <h3 class="text-xl md:text-2xl font-black text-[#154337] tracking-wider">{{ selectedDay.fullDate }}</h3>
-            <span class="text-xs md:text-sm font-bold text-gray-500 bg-gray-200 px-2.5 py-1 rounded-full">星期{{ weekdays[selectedDay.dayOfWeek] }}</span>
+        <!-- 左側：當日預約名單 -->
+        <div :class="['w-full md:w-1/2 bg-[#FAF4EE]/40 p-4 sm:p-6 overflow-y-auto border-r border-gray-200', mobileModalTab === 'appts' ? 'block' : 'hidden md:block']">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl md:text-2xl font-black text-[#154337] tracking-wider font-serif">
+              {{ selectedDay.fullDate }}
+            </h3>
+            <span class="text-xs font-bold text-[#154337] bg-[#154337]/10 px-3 py-1 rounded-full border border-[#154337]/15">
+              星期{{ weekdays[selectedDay.dayOfWeek] }}
+            </span>
           </div>
-          <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm md:text-base"><Icon name="mdi:calendar-check" size="18"/> 當日預約名單</h4>
-          <div v-if="selectedDayAppointments.length === 0" class="bg-white rounded-xl p-6 text-center text-gray-400 border border-dashed border-gray-300 text-xs md:text-sm">當日無預約</div>
+          
+          <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm md:text-base">
+            <Icon name="mdi:calendar-check" class="text-emerald-700" size="18"/> 
+            當日預約名單
+          </h4>
+
+          <div v-if="selectedDayAppointments.length === 0" class="bg-white rounded-2xl p-6 text-center text-gray-400 border border-dashed border-gray-300 text-xs md:text-sm">
+            當日暫無預約資料
+          </div>
+          
           <div v-else class="space-y-3">
-            <div v-for="appt in selectedDayAppointments" :key="appt.id" class="bg-white p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 border-l-4" :class="appt.status === 'complete' ? 'border-l-blue-500' : appt.status === 'cancelled' ? 'border-l-red-500 opacity-60' : 'border-l-[#154337]'">
+            <div 
+              v-for="appt in selectedDayAppointments" 
+              :key="appt.id" 
+              class="bg-white p-4 rounded-2xl shadow-xs border border-gray-200/80 border-l-4 transition hover:shadow-md"
+              :class="appt.status === 'complete' ? 'border-l-blue-600' : appt.status === 'cancelled' ? 'border-l-rose-500 opacity-60' : 'border-l-[#154337]'"
+            >
               <div class="flex justify-between items-start mb-2">
-                <span class="font-black text-base md:text-lg text-gray-800">{{ appt.start_time }} - {{ appt.end_time }}</span>
-                <span :class="['text-[10px] md:text-xs font-bold px-2 py-0.5 rounded', appt.status === 'complete' ? 'bg-blue-100 text-blue-700' : appt.status === 'confirmed' ? 'bg-green-100 text-green-700' : appt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800']">
+                <span class="font-black text-base md:text-lg text-gray-900 font-mono">
+                  {{ appt.start_time }} - {{ appt.end_time }}
+                </span>
+                <span :class="['text-[11px] font-bold px-2.5 py-0.5 rounded-full border', appt.status === 'complete' ? 'bg-blue-50 text-blue-700 border-blue-200' : appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200']">
                   {{ appt.status === 'complete' ? '已完成' : appt.status === 'confirmed' ? '已確認' : appt.status === 'cancelled' ? '已取消' : '審核中' }}
                 </span>
               </div>
-              <div class="mb-2.5 flex items-center gap-2 text-xs">
+
+              <!-- 美容師指派下拉框 -->
+              <div class="mb-3 flex items-center gap-2 text-xs">
                 <span class="font-bold text-gray-500">美容師：</span>
-                <select :value="appt.beautician_id || ''" @change="updateAppointmentBeautician(appt.id, ($event.target as HTMLSelectElement).value)" class="border border-gray-300 rounded px-2 py-1 text-xs bg-white">
+                <select 
+                  :value="appt.beautician_id || ''" 
+                  @change="updateAppointmentBeautician(appt.id, ($event.target as HTMLSelectElement).value)" 
+                  class="border border-gray-300 rounded-lg px-2.5 py-1 text-xs bg-white focus:ring-2 focus:ring-[#154337] outline-none"
+                >
                   <option value="">未指派</option>
                   <option v-for="b in beauticians" :key="b.id" :value="b.id">{{ b.name }}</option>
                 </select>
               </div>
-              <div class="mb-2.5">
-                <button @click="openClientModal(appt)" class="font-bold text-xs md:text-sm text-gray-800 hover:text-[#154337] flex items-center gap-1.5 text-left transition">
-                  <span class="underline decoration-dotted underline-offset-4">{{ appt.client_name }}</span>
-                  <span v-if="appt.visit_count > 0" class="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-black">履約 {{ appt.visit_count }} 次</span>
-                  <Icon name="mdi:chevron-right" size="16" class="text-gray-400" />
+
+              <!-- 客戶姓名 -->
+              <div class="mb-3">
+                <button @click="openClientModal(appt)" class="font-bold text-sm text-gray-900 hover:text-[#154337] flex items-center gap-1.5 text-left transition group">
+                  <span class="underline decoration-dotted underline-offset-4 group-hover:text-[#154337]">{{ appt.client_name }}</span>
+                  <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-black">
+                    履約 {{ appt.visit_count }} 次
+                  </span>
+                  <Icon name="mdi:chevron-right" size="16" class="text-gray-400 group-hover:translate-x-0.5 transition" />
                 </button>
               </div>
-              <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+
+              <!-- 預約備註 preview -->
+              <div class="bg-[#FAF4EE]/60 p-2.5 rounded-xl border border-[#154337]/10">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-[10px] font-bold text-gray-500 flex items-center gap-1"><Icon name="mdi:note-edit-outline" size="14" /> 預約單筆備註</span>
-                  <button @click="openNoteModal(appt)" class="text-[10px] text-[#154337] font-bold hover:underline">查看/編輯</button>
+                  <span class="text-[11px] font-bold text-gray-600 flex items-center gap-1">
+                    <Icon name="mdi:note-edit-outline" size="14" class="text-[#154337]" /> 預約備註
+                  </span>
+                  <button @click="openNoteModal(appt)" class="text-[11px] text-[#154337] font-bold hover:underline cursor-pointer">
+                    查看/編輯
+                  </button>
                 </div>
                 <p class="text-xs text-gray-600 truncate">{{ appt.notes || '無備註' }}</p>
               </div>
@@ -640,53 +714,71 @@ const saveUserNotes = async (appt: any) => {
           </div>
         </div>
 
-        <!-- 休假設定 -->
+        <!-- 右側：休假與休息時段設定 -->
         <div :class="['w-full md:w-1/2 bg-white p-4 sm:p-6 overflow-y-auto relative', mobileModalTab === 'holidays' ? 'block' : 'hidden md:block']">
-          <h4 class="font-bold text-gray-700 mb-4 md:mb-6 flex items-center gap-2 text-sm md:text-base"><Icon name="mdi:beach" size="18"/> 休假排程設定</h4>
-          <div class="bg-red-50 rounded-xl p-4 mb-5 border border-red-100">
+          <h4 class="font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 text-sm md:text-base">
+            <Icon name="mdi:beach" class="text-amber-600" size="18"/> 
+            休假與公休設定
+          </h4>
+
+          <!-- 整日公休切換卡片 -->
+          <div class="bg-rose-50/60 rounded-2xl p-4 mb-5 border border-rose-200/80">
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-bold text-red-800 text-xs md:text-sm">整日公休</p>
-                <p class="text-[10px] md:text-xs text-red-600 mt-0.5" v-if="isSelectedDayWeeklyOff">此日為每週固定公休，不可在此取消。</p>
-                <p class="text-[10px] md:text-xs text-red-600 mt-0.5" v-else>開啟後，今日將無法被預約。</p>
+                <p class="font-bold text-rose-900 text-sm">全天公休設定</p>
+                <p class="text-[11px] text-rose-600 mt-0.5" v-if="isSelectedDayWeeklyOff">此日為每週固定公休，需至頁面上方取消勾選。</p>
+                <p class="text-[11px] text-rose-600 mt-0.5" v-else>開啟後今日將關閉預約，並於月曆標示公休。</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer" :class="{ 'opacity-50 pointer-events-none': isSelectedDayWeeklyOff }">
                 <input type="checkbox" class="sr-only peer" :checked="!!selectedDayFullOff || isSelectedDayWeeklyOff" @change="toggleFullDayOff">
-                <div class="w-10 h-5 md:w-11 md:h-6 bg-gray-300 rounded-full peer peer-checked:bg-red-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 md:after:h-5 md:after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-rose-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
               </label>
             </div>
           </div>
+
+          <!-- 時段性休息 -->
           <div v-if="!selectedDayFullOff && !isSelectedDayWeeklyOff">
             <div class="mb-4">
-              <label class="block text-xs md:text-sm font-bold text-gray-700 mb-2">新增時段性休息 (30分鐘為單位)</label>
+              <label class="block text-xs sm:text-sm font-bold text-gray-800 mb-2">新增時段性休息 (30分鐘為單位)</label>
               
-              <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-                <div class="flex gap-2 items-center flex-1">
-                  <select v-model="timeOffForm.start" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none">
+              <div class="flex flex-col gap-2.5">
+                <div class="flex gap-2 items-center">
+                  <select v-model="timeOffForm.start" class="flex-1 border border-gray-300 rounded-xl p-2 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-[#154337] outline-none">
                     <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
                   </select>
                   <span class="text-xs text-gray-400 font-bold">至</span>
-                  <select v-model="timeOffForm.end" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none">
+                  <select v-model="timeOffForm.end" class="flex-1 border border-gray-300 rounded-xl p-2 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-[#154337] outline-none">
                     <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
                   </select>
                 </div>
                 
-                <div class="flex gap-2 items-center flex-1">
-                  <input type="text" v-model="timeOffForm.reason" placeholder="事由 (選填，預設為休息)" class="flex-1 border border-gray-300 rounded-lg p-2.5 sm:p-2 text-xs md:text-sm bg-white focus:ring-1 focus:ring-[#154337] outline-none" @keyup.enter="addTimeOff" />
-                  <button @click="addTimeOff" class="bg-[#154337] text-white px-4 py-2.5 sm:py-2 rounded-lg text-xs md:text-sm font-bold hover:bg-opacity-90 transition whitespace-nowrap shadow-sm">新增</button>
+                <div class="flex gap-2 items-center">
+                  <input type="text" v-model="timeOffForm.reason" placeholder="事由 (選填，預設為休息)" class="flex-1 border border-gray-300 rounded-xl p-2 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-[#154337] outline-none" @keyup.enter="addTimeOff" />
+                  <button @click="addTimeOff" class="bg-[#154337] text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-[#11352a] active:scale-95 transition whitespace-nowrap shadow-xs cursor-pointer">
+                    新增時段
+                  </button>
                 </div>
               </div>
             </div>
             
-            <div class="space-y-2 mt-4">
-              <p class="text-xs font-bold text-gray-500 mb-1">已設定的休息時段：</p>
-              <div v-if="selectedDayTimeOffs.length === 0" class="text-xs text-gray-400 italic">無設定</div>
-              <div v-for="off in selectedDayTimeOffs" :key="off.id" class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-xs hover:bg-gray-100 transition">
+            <!-- 已設定的休息時段清單 -->
+            <div class="space-y-2 mt-5">
+              <p class="text-xs font-bold text-gray-600 mb-1">已設定的休息時段：</p>
+              <div v-if="selectedDayTimeOffs.length === 0" class="text-xs text-gray-400 italic py-2">目前無時段性休息</div>
+              <div 
+                v-for="off in selectedDayTimeOffs" 
+                :key="off.id" 
+                class="flex justify-between items-center bg-[#FAF4EE]/60 p-3 rounded-xl border border-gray-200 text-xs hover:bg-[#FAF4EE] transition"
+              >
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-gray-700">{{ off.start_time }} - {{ off.end_time }}</span>
-                  <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold">{{ off.reason || '休息' }}</span>
+                  <span class="font-bold text-gray-800 font-mono">{{ off.start_time }} - {{ off.end_time }}</span>
+                  <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md text-[10px] font-bold border border-amber-200">
+                    {{ off.reason || '休息' }}
+                  </span>
                 </div>
-                <button @click="deleteHoliday(off.id)" class="text-red-500 hover:bg-red-100 p-1.5 rounded transition"><Icon name="mdi:delete" size="16" /></button>
+                <button @click="deleteHoliday(off.id)" class="text-rose-500 hover:bg-rose-100 p-1.5 rounded-lg transition cursor-pointer" title="刪除時段">
+                  <Icon name="mdi:delete" size="16" />
+                </button>
               </div>
             </div>
           </div>
@@ -694,212 +786,69 @@ const saveUserNotes = async (appt: any) => {
       </div>
     </div>
 
-    <!-- 客戶詳情彈窗（含問卷狀態與編輯功能） -->
-    <div v-if="showClientModal && selectedClient" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
-        <button @click="showClientModal = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
-          <Icon name="mdi:close" size="22" />
+    <!-- 客戶詳情彈窗 -->
+    <div v-if="showClientModal && selectedClient" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto border border-white/20">
+        <button @click="showClientModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
+          <Icon name="mdi:close" size="20" />
         </button>
-        <h3 class="text-lg font-bold text-[#154337] mb-4 flex items-center gap-2">
-          <Icon name="mdi:account-details" size="22" /> 客戶詳細資料
+        <h3 class="text-lg font-bold text-[#154337] mb-4 flex items-center gap-2 font-serif">
+          <Icon name="mdi:account-details" class="text-emerald-700" size="22" /> 客戶詳細資料
         </h3>
         <div class="space-y-3 text-sm">
-          <div class="grid grid-cols-2 gap-2">
-            <div><span class="text-gray-500">姓名：</span><span class="font-semibold">{{ selectedClient.client_name }}</span></div>
-            <div><span class="text-gray-500">性別：</span><span class="font-semibold">{{ selectedClient.client_gender || '未填寫' }}</span></div>
+          <div class="grid grid-cols-2 gap-2 bg-[#FAF4EE]/50 p-3 rounded-xl border border-[#154337]/10">
+            <div><span class="text-gray-500 text-xs">姓名：</span><span class="font-bold text-gray-900">{{ selectedClient.client_name }}</span></div>
+            <div><span class="text-gray-500 text-xs">性別：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_gender || '未填寫' }}</span></div>
           </div>
-          <div><span class="text-gray-500">電話：</span><span class="font-semibold">{{ selectedClient.client_phone }}</span></div>
-          <div><span class="text-gray-500">信箱：</span><span class="font-semibold">{{ selectedClient.client_email || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">生日：</span><span class="font-semibold">{{ selectedClient.client_date_of_birth || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">年齡：</span><span class="font-semibold">{{ selectedClient.age !== null ? selectedClient.age + ' 歲' : '無法計算' }}</span></div>
-          <div><span class="text-gray-500">所在地：</span><span class="font-semibold">{{ selectedClient.client_location || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">到店履約次數：</span><span class="font-semibold">{{ selectedClient.visit_count || 0 }}</span></div>
+          <div><span class="text-gray-500">電話：</span><span class="font-semibold text-gray-800 font-mono">{{ selectedClient.client_phone }}</span></div>
+          <div><span class="text-gray-500">信箱：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_email || '未填寫' }}</span></div>
+          <div><span class="text-gray-500">所在地：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_location || '未填寫' }}</span></div>
+          <div><span class="text-gray-500">履約次數：</span><span class="font-bold text-[#154337]">{{ selectedClient.visit_count || 0 }} 次</span></div>
           
-          <!-- 問卷狀態區塊 -->
+          <!-- 問卷區 -->
           <div class="border-t border-gray-200 pt-3 mt-2">
             <div class="flex items-center justify-between mb-2">
-              <span class="font-bold text-gray-700 text-sm">📋 初填問卷</span>
+              <span class="font-bold text-gray-800 text-xs sm:text-sm">📋 初填問卷狀態</span>
               <button 
                 @click="openQuestionnaireModal" 
-                class="text-xs bg-[#154337] text-white px-3 py-1 rounded-lg hover:bg-opacity-90 transition font-bold"
+                class="text-xs bg-[#154337] text-white px-3 py-1 rounded-xl hover:bg-[#11352a] active:scale-95 transition font-bold cursor-pointer"
               >
                 {{ questionnaireData ? '編輯問卷' : '填寫問卷' }}
               </button>
             </div>
-            <div v-if="loadingQuestionnaire" class="text-xs text-gray-400">載入中...</div>
-            <div v-else-if="questionnaireData" class="bg-gray-50 p-2 rounded-lg border border-gray-200 text-xs space-y-1">
+            <div v-if="loadingQuestionnaire" class="text-xs text-gray-400 py-1">載入中...</div>
+            <div v-else-if="questionnaireData" class="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs space-y-1">
               <p><span class="text-gray-500">如何得知：</span>{{ howToKnowMap[questionnaireData.how_to_know] || questionnaireData.how_to_know || '未填' }}</p>
               <p><span class="text-gray-500">膚質：</span>{{ questionnaireData.skin_type || '未填' }}</p>
               <p><span class="text-gray-500">主要困擾：</span>{{ questionnaireData.concerns || '未填' }}</p>
               <p v-if="questionnaireData.notes"><span class="text-gray-500">備註：</span>{{ questionnaireData.notes }}</p>
             </div>
-            <div v-else class="text-xs text-gray-400 italic">尚未填寫初次到店問卷</div>
+            <div v-else class="text-xs text-gray-400 italic py-1">尚未填寫初次到店問卷</div>
           </div>
 
           <div class="border-t border-gray-200 pt-3 mt-2">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-gray-500">會員備註：</span>
-              <button @click="saveUserNotes(selectedClient)" class="text-xs bg-[#154337] text-white px-2 py-0.5 rounded font-bold">儲存</button>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-gray-500 font-bold">會員備註：</span>
+              <button @click="saveUserNotes(selectedClient)" class="text-xs bg-[#154337] text-white px-2.5 py-0.5 rounded-lg font-bold cursor-pointer">儲存</button>
             </div>
-            <input type="text" v-model="selectedClient.editUserNotes" class="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="修改會員備註..." />
-          </div>
-          <div class="mt-2 bg-gray-50 p-3 rounded-lg">
-            <p class="font-bold text-gray-600 text-xs mb-1">歷史到店紀錄：</p>
-            <div v-if="getClientHistory(selectedClient.user_id).length === 0" class="text-gray-400 italic text-xs">無紀錄</div>
-            <ul v-else class="space-y-1 max-h-32 overflow-y-auto text-xs">
-              <li v-for="history in getClientHistory(selectedClient.user_id)" :key="history.id" class="flex justify-between items-center border-b border-gray-100 py-1">
-                <span>{{ history.date }} {{ history.start_time }}</span>
-                <span class="text-gray-500">{{ history.notes || '無備註' }}</span>
-              </li>
-            </ul>
+            <input type="text" v-model="selectedClient.editUserNotes" class="w-full border border-gray-300 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-[#154337]" placeholder="修改會員備註..." />
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 問卷編輯彈窗 -->
-    <div v-if="showQuestionnaireModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto">
-        <button @click="showQuestionnaireModal = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
-          <Icon name="mdi:close" size="22" />
-        </button>
-        <h3 class="text-lg font-bold text-[#154337] mb-4 flex items-center gap-2">
-          <Icon name="mdi:clipboard-text" size="22" /> {{ questionnaireData ? '編輯初填問卷' : '填寫初填問卷' }}
-        </h3>
-        <form @submit.prevent="saveQuestionnaire" class="space-y-4">
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">如何得知本店</label>
-            <select v-model="questionnaireForm.how_to_know" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]">
-              <option value="instagram">Instagram</option>
-              <option value="friend">朋友推薦</option>
-              <option value="search">搜尋引擎</option>
-              <option value="other">其他</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">以往護膚經驗</label>
-            <input v-model="questionnaireForm.history_of_treatments" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="請簡述過去護膚經驗" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">過敏原 / 藥物過敏</label>
-            <input v-model="questionnaireForm.allergies" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="若有過敏請註明" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">特殊病史 / 近期醫美狀況</label>
-            <input v-model="questionnaireForm.medical_history" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="若有特殊狀況請註明" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">肌膚類型</label>
-            <input v-model="questionnaireForm.skin_type" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="例如：乾性、油性、混合肌" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">主要肌膚困擾</label>
-            <input v-model="questionnaireForm.concerns" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="例如：粉刺、毛孔粗大、細紋" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">日常保養習慣</label>
-            <input v-model="questionnaireForm.Habit" type="text" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="請簡述日常保養步驟" />
-          </div>
-
-          <div>
-            <label class="text-sm font-bold text-gray-700 block mb-1">其他備註</label>
-            <textarea v-model="questionnaireForm.notes" rows="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="其他想補充的事項..."></textarea>
-          </div>
-          <!-- 課程同意書 -->
-          <div class="border border-gray-200 rounded-lg p-4 bg-gray-50/60">
-            <details class="group">
-              <summary class="cursor-pointer text-sm font-bold text-[#154337] flex items-center gap-2">
-                <Icon name="mdi:file-document-outline" size="18" />
-                赫琟美學｜FACIAL 臉部肌膚管理課程 同意書
-                <Icon name="mdi:chevron-down" class="group-open:rotate-180 transition-transform ml-auto" size="20" />
-              </summary>
-              <div class="mt-3 text-xs text-gray-700 space-y-1.5 leading-relaxed bg-white p-3 rounded-lg border border-gray-200">
-                <p>本人已了解並同意以下事項：</p>
-                <ol class="list-decimal list-inside space-y-1 ml-2">
-                  <li>肌膚更新週期約28天，效果依個人體質不同。</li>
-                  <li>課程後可能出現短暫泛紅、乾燥、代謝反應，屬正常現象。</li>
-                  <li>本課程非醫療行為，無法保證立即改善。</li>
-                  <li>術後須加強保濕與防曬。</li>
-                  <li>已主動告知懷孕、服藥、皮膚疾病等狀況。</li>
-                  <li>如有不適將立即聯繫。</li>
-                </ol>
-                <p class="mt-2 font-semibold">本人確認資料屬實並同意接受課程。</p>
-              </div>
-            </details>
-
-            <div class="mt-3 flex items-start gap-2">
-              <input 
-                type="checkbox" 
-                v-model="questionnaireForm.agreed_to_terms" 
-                :disabled="questionnaireData && questionnaireData.agreed_to_terms === 1"
-                class="mt-1 w-4 h-4 text-[#154337] focus:ring-[#154337] rounded border-gray-300"
-              />
-              <label class="text-[13px] text-gray-700 font-medium">
-                {{ questionnaireData && questionnaireData.agreed_to_terms === 1 ? '✅ 已同意課程同意書' : '本人確認資料屬實並同意接受課程（初次填寫需勾選）' }}
-              </label>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 mt-4">
-            <button type="button" @click="showQuestionnaireModal = false" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">取消</button>
-            <button type="submit" :disabled="questionnaireSaving" class="px-4 py-2 text-sm bg-[#154337] text-white rounded-lg hover:bg-opacity-90 transition font-bold disabled:opacity-50">
-              {{ questionnaireSaving ? '儲存中...' : '儲存問卷' }}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
 
     <!-- 備註編輯彈窗 -->
-    <div v-if="showNoteModal && editingNoteAppt" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
-        <button @click="showNoteModal = false" class="absolute top-3 right-3 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
-          <Icon name="mdi:close" size="22" />
+    <div v-if="showNoteModal && editingNoteAppt" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative">
+        <button @click="showNoteModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
+          <Icon name="mdi:close" size="20" />
         </button>
-        <h3 class="text-lg font-bold text-[#154337] mb-2">編輯預約備註</h3>
-        <p class="text-xs text-gray-500 mb-4">預約編號：{{ editingNoteAppt.appointment_code }}</p>
-        <textarea v-model="noteInput" rows="4" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#154337]" placeholder="請輸入備註內容..."></textarea>
+        <h3 class="text-lg font-bold text-[#154337] mb-2 font-serif">編輯預約單筆備註</h3>
+        <p class="text-xs text-gray-400 mb-4 font-mono">預約單號：{{ editingNoteAppt.appointment_code }}</p>
+        <textarea v-model="noteInput" rows="4" class="w-full border border-gray-300 rounded-xl p-3 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#154337]" placeholder="請輸入備註內容..."></textarea>
         <div class="flex justify-end gap-2 mt-4">
-          <button @click="showNoteModal = false" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">取消</button>
-          <button @click="saveNote" class="px-4 py-2 text-sm bg-[#154337] text-white rounded-lg hover:bg-opacity-90 transition font-bold">儲存</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 美容師管理彈窗 -->
-    <div v-if="showBeauticianModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-5 md:p-6 relative">
-        <button @click="showBeauticianModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1 transition">
-          <Icon name="mdi:close" size="22" />
-        </button>
-        <h3 class="text-lg md:text-xl font-bold text-[#154337] mb-4 flex items-center gap-2"><Icon name="mdi:account-group" size="22" /> 美容師團隊管理</h3>
-        <div class="flex gap-2 mb-4 md:mb-6">
-          <input type="text" v-model="newBeauticianName" placeholder="請輸入新美容師姓名" class="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-[#154337]" @keyup.enter="addBeautician" />
-          <button @click="addBeautician" class="bg-[#154337] text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-opacity-90 transition whitespace-nowrap">新增</button>
-        </div>
-        <div class="space-y-2 max-h-64 sm:max-h-80 overflow-y-auto">
-          <div v-if="beauticians.length === 0" class="text-center text-gray-400 py-6 border border-dashed rounded-xl text-xs">目前尚未建立美容師資料</div>
-          <div v-for="b in beauticians" :key="b.id" class="flex justify-between items-center p-2.5 md:p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <template v-if="editingBeauticianId === b.id">
-              <input type="text" v-model="editingBeauticianName" class="border border-gray-300 rounded-lg px-2 py-1 text-xs md:text-sm flex-1 mr-2" @keyup.enter="saveEditBeautician(b.id)" />
-              <div class="flex gap-1">
-                <button @click="saveEditBeautician(b.id)" class="text-xs bg-green-600 text-white px-2 py-1 rounded-lg">儲存</button>
-                <button @click="editingBeauticianId = null" class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-lg">取消</button>
-              </div>
-            </template>
-            <template v-else>
-              <span class="font-bold text-gray-800 text-xs md:text-sm">👤 {{ b.name }}</span>
-              <div class="flex items-center gap-1">
-                <button @click="startEditBeautician(b)" class="text-xs bg-white text-gray-700 border border-gray-200 px-2 py-1 rounded-lg hover:bg-gray-100">編輯</button>
-                <button @click="deleteBeautician(b.id, b.name)" class="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg hover:bg-red-100">刪除</button>
-              </div>
-            </template>
-          </div>
+          <button @click="showNoteModal = false" class="px-4 py-2 text-xs font-bold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition cursor-pointer">取消</button>
+          <button @click="saveNote" class="px-4 py-2 text-xs font-bold bg-[#154337] text-white rounded-xl hover:bg-[#11352a] active:scale-95 transition shadow-xs cursor-pointer">儲存</button>
         </div>
       </div>
     </div>
@@ -909,10 +858,17 @@ const saveUserNotes = async (appt: any) => {
 
 <style>
 .animate-fade-in {
-  animation: fadeIn 0.25s ease-in-out;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(21, 67, 55, 0.2);
+  border-radius: 3px;
 }
 </style>
