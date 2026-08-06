@@ -146,8 +146,8 @@
 
     <!-- 主內容區 -->
     <div class="flex-1 flex flex-col overflow-hidden bg-[#FAF4EE] min-w-0 relative z-10">
-      <!-- 頂部列 (Frosted Glass 質感浮動頂欄) -->
-      <header class="bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 md:px-8 h-[64px] md:h-[72px] shrink-0 box-border border-b border-[#154337]/10 shadow-xs">
+      <!-- 頂部列 (Frosted Glass 質感浮動頂欄，relative z-50 確保通知選單全視域最上層) -->
+      <header class="bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 md:px-8 h-[64px] md:h-[72px] shrink-0 box-border border-b border-[#154337]/10 shadow-xs relative z-50">
         <div class="flex items-center gap-3 text-gray-500 text-sm">
           <!-- 手機版：漢堡選單按鈕 -->
           <button 
@@ -185,10 +185,17 @@
             </div>
           </div>
 
-          <!-- 🌟 通知中心按鈕與下拉浮動面板 -->
+          <!-- 🌟 通知中心按鈕與下拉浮動面板 (z-50 頂層高權重) -->
           <div class="relative">
+            <!-- 點擊遮罩 (點擊外部自動關閉通知視窗) -->
+            <div 
+              v-if="showNotificationsPanel" 
+              class="fixed inset-0 z-40 bg-transparent" 
+              @click="showNotificationsPanel = false"
+            ></div>
+
             <button 
-              class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95"
+              class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95 z-50"
               title="通知中心"
               @click="showNotificationsPanel = !showNotificationsPanel"
             >
