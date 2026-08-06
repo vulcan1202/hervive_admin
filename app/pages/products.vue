@@ -210,6 +210,14 @@ const handleProductSubmit = async () => {
   }
 }
 
+const getStockChange = (type: string, quantity: number): number => {
+  const qty = Math.abs(quantity)
+  if (type === 'purchase') return qty
+  if (type === 'sale' || type === 'usage') return -qty
+  if (type === 'adjustment') return quantity
+  return 0
+}
+
 // 送出庫存異動
 const handleStockSubmit = async () => {
   if (stockForm.type !== 'adjustment' && (stockForm.quantity === undefined || stockForm.quantity === null || stockForm.quantity === 0)) {
@@ -220,6 +228,14 @@ const handleStockSubmit = async () => {
   }
   if (!stockForm.date) {
     return showToast('請選擇發生日期', true)
+  }
+
+  const targetProduct = products.value.find(p => p.id === stockForm.product_id)
+  if (targetProduct && !isEditingStock.value) {
+    const change = getStockChange(stockForm.type, stockForm.quantity)
+    if (targetProduct.stock_quantity + change < 0) {
+      return showToast(`庫存不足！「${targetProduct.name}」目前庫存為 ${targetProduct.stock_quantity} 件，異動後剩餘數量不能小於 0`, true)
+    }
   }
 
   const method = isEditingStock.value ? 'PUT' : 'POST'
