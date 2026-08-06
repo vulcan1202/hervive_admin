@@ -10,7 +10,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const { isAuthenticated, checkAuth, isInitialized } = useAuth()
 
-  // 第一次載入時強制向後端驗證 Session
+  // 第一次載入時向後端驗證 Session
   if (!isInitialized.value) {
     await checkAuth()
   }
@@ -18,17 +18,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // 1. 如果前往登入頁面 (/login)
   if (to.path === '/login') {
     if (isAuthenticated.value) {
-      return navigateTo('/')
+      return navigateTo('/', { replace: true })
     }
     return
   }
 
-  // 2. 前往其他後台系統頁面 -> 必須已驗證身份
+  // 2. 前往其他後台系統頁面 -> 未驗證身份時即刻跳轉至 /login
   if (!isAuthenticated.value) {
-    // 重新查驗一次確定非同步 Token 狀態
-    const isValid = await checkAuth()
-    if (!isValid) {
-      return navigateTo('/login')
-    }
+    return navigateTo('/login', { replace: true })
   }
 })
