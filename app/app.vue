@@ -12,7 +12,7 @@
     <aside 
       :class="[
         'bg-[#154337] flex flex-col transition-all duration-300 shadow-[4px_0_20px_rgba(21,67,55,0.1)] z-30 shrink-0 h-full border-r border-white/10 text-white',
-        'absolute md:relative', // 手機版絕對定位覆蓋，電腦版彈性排版
+        'absolute md:relative',
         isCollapsed ? '-translate-x-full md:translate-x-0 md:w-[52px]' : 'translate-x-0 w-[250px] md:w-[230px]' 
       ]"
     >
@@ -185,14 +185,97 @@
             </div>
           </div>
 
-          <!-- 通知按鈕 -->
-          <button 
-            class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95"
-            title="通知中心"
-          >
-            <Icon name="mdi:bell-outline" class="text-xl" />
-            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
-          </button>
+          <!-- 🌟 通知中心按鈕與下拉浮動面板 -->
+          <div class="relative">
+            <button 
+              class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95"
+              title="通知中心"
+              @click="showNotificationsPanel = !showNotificationsPanel"
+            >
+              <Icon name="mdi:bell-outline" class="text-xl" />
+              <span 
+                v-if="unreadCount > 0" 
+                class="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse font-mono"
+              >
+                {{ unreadCount }}
+              </span>
+            </button>
+
+            <!-- 浮動通知面板 Drawer Panel -->
+            <div 
+              v-if="showNotificationsPanel" 
+              class="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-[#154337]/15 z-50 overflow-hidden"
+            >
+              <!-- Panel Header -->
+              <div class="p-4 bg-[#FAF4EE] border-b border-[#154337]/10 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="mdi:bell-ring" class="text-[#154337]" />
+                  <h3 class="font-bold text-[#154337] text-sm">通知中心</h3>
+                  <span v-if="unreadCount > 0" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                    {{ unreadCount }} 未讀
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <button @click="markAllAsRead" class="text-gray-600 hover:text-[#154337] transition cursor-pointer font-bold">全部已讀</button>
+                  <span class="text-gray-300">|</span>
+                  <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空</button>
+                </div>
+              </div>
+
+              <!-- Filter Tabs -->
+              <div class="flex border-b border-gray-100 px-3 bg-white text-xs">
+                <button 
+                  @click="activeNotificationTab = 'all'"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'all' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                >
+                  全部 ({{ notifications.length }})
+                </button>
+                <button 
+                  @click="activeNotificationTab = 'appointment'"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'appointment' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                >
+                  預約通知
+                </button>
+                <button 
+                  @click="activeNotificationTab = 'financial'"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'financial' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                >
+                  財務週月報
+                </button>
+              </div>
+
+              <!-- Notification Item List -->
+              <div class="max-h-80 overflow-y-auto divide-y divide-gray-100 p-1.5 custom-scrollbar">
+                <div v-if="filteredNotifications.length === 0" class="py-8 text-center text-gray-400 text-xs">
+                  尚無任何通知推播訊息
+                </div>
+                <div 
+                  v-for="item in filteredNotifications" 
+                  :key="item.id"
+                  @click="markAsRead(item)"
+                  :class="[
+                    'p-3 hover:bg-[#FAF4EE]/70 transition cursor-pointer flex gap-3 items-start relative rounded-2xl my-1 border border-transparent hover:border-[#154337]/10',
+                    !item.read ? 'bg-emerald-50/40 font-medium' : 'opacity-75 bg-white'
+                  ]"
+                >
+                  <div :class="['w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs', item.iconBg]">
+                    <Icon :name="item.icon" class="text-lg" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-1 mb-0.5">
+                      <span class="font-bold text-xs text-gray-900 truncate">{{ item.title }}</span>
+                      <span :class="['px-2 py-0.5 rounded-full text-[9px] font-bold border shrink-0', item.badgeClass]">
+                        {{ item.badgeText }}
+                      </span>
+                    </div>
+                    <p class="text-xs text-gray-600 leading-snug line-clamp-2">{{ item.message }}</p>
+                    <span class="text-[10px] text-gray-400 font-mono mt-1 block">{{ item.time }}</span>
+                  </div>
+                  <span v-if="!item.read" class="w-2 h-2 rounded-full bg-rose-500 absolute top-3 right-3 shadow-xs"></span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 管理員 Avatar -->
           <div class="flex items-center gap-2.5 py-1 pr-3 pl-1.5 bg-[#FAF4EE] border border-[#154337]/10 rounded-full cursor-pointer hover:border-[#154337]/30 transition group">
@@ -215,14 +298,159 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+
+const config = useRuntimeConfig()
+const backendUrl = config.public.backendUrl
 
 const route = useRoute()
+const router = useRouter()
 const isCollapsed = ref(false)
 
-const routeTitleMap = {
+// 🌟 通知中心狀態與型別宣告
+const showNotificationsPanel = ref(false)
+const activeNotificationTab = ref<'all' | 'appointment' | 'financial'>('all')
+
+interface NotificationItem {
+  id: string
+  type: 'appointment' | 'financial_weekly' | 'financial_monthly'
+  title: string
+  message: string
+  time: string
+  read: boolean
+  link: string
+  badgeText: string
+  badgeClass: string
+  icon: string
+  iconBg: string
+}
+
+const notifications = ref<NotificationItem[]>([])
+
+const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+
+const filteredNotifications = computed(() => {
+  if (activeNotificationTab.value === 'appointment') {
+    return notifications.value.filter(n => n.type === 'appointment')
+  }
+  if (activeNotificationTab.value === 'financial') {
+    return notifications.value.filter(n => n.type === 'financial_weekly' || n.type === 'financial_monthly')
+  }
+  return notifications.value
+})
+
+const getTaiwanDateString = (dateObj: Date = new Date()) => {
+  const formatter = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(dateObj);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
+// 🌟 自動獲取與生成【新確認預約】與【每週 / 每月財報】推播訊息
+const fetchNotifications = async () => {
+  try {
+    const list: NotificationItem[] = []
+    const todayStr = getTaiwanDateString()
+    const yearMonth = todayStr.slice(0, 7)
+
+    // 1. 新確認預約通知推播 (GET /api/appointments)
+    const apptRes = await fetch(`${backendUrl}/api/appointments`).then(r => r.ok ? r.json() : null)
+    if (apptRes && apptRes.data) {
+      const confirmedAppts = apptRes.data.filter((a: any) => a.status === 'confirmed' || a.status === 'pending')
+      confirmedAppts.slice(0, 5).forEach((a: any) => {
+        list.push({
+          id: `appt-${a.id}`,
+          type: 'appointment',
+          title: `【預約通知】新增預約 - ${a.client_name}`,
+          message: `預約時間：${a.date} ${a.start_time} | 預約單號：${a.appointment_code}`,
+          time: a.date,
+          read: false,
+          link: '/Appointment',
+          badgeText: a.status === 'confirmed' ? '預約已確認' : '待服務',
+          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          icon: 'mdi:calendar-check',
+          iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+        })
+      })
+    }
+
+    // 2. 每週與每月財報通知推播 (GET /api/financial-summary)
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+    const startOfWeekStr = getTaiwanDateString(startOfWeek)
+
+    const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${startOfWeekStr}&end_date=${todayStr}`).then(r => r.ok ? r.json() : null)
+    if (finRes && finRes.data) {
+      const summary = finRes.data
+      const weeklyRev = summary.revenue_recognition?.total_recognized_revenue || 0
+      const netCash = summary.cash_flow?.net_cash_flow || 0
+
+      // 週財報推播卡片
+      list.push({
+        id: `fin-weekly-${startOfWeekStr}`,
+        type: 'financial_weekly',
+        title: `【週財報推播】本週門市營收實質履約統計`,
+        message: `當週實質履約營收 NT$ ${weeklyRev.toLocaleString()} | 現金淨流入 NT$ ${netCash.toLocaleString()}`,
+        time: `${startOfWeekStr} ~ ${todayStr}`,
+        read: false,
+        link: '/analytics',
+        badgeText: '週財報',
+        badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
+        icon: 'mdi:chart-timeline-variant-shimmer',
+        iconBg: 'bg-purple-50 text-purple-600 border border-purple-200'
+      })
+
+      // 月財報推播卡片
+      list.push({
+        id: `fin-monthly-${yearMonth}`,
+        type: 'financial_monthly',
+        title: `【月財報推播】${yearMonth} 月份門市營運綜合結算`,
+        message: `當期累積實質履約營收 NT$ ${weeklyRev.toLocaleString()}，門市財務帳目已登錄！`,
+        time: yearMonth,
+        read: false,
+        link: '/finance',
+        badgeText: '月財報',
+        badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+        icon: 'mdi:finance',
+        iconBg: 'bg-amber-50 text-amber-600 border border-amber-200'
+      })
+    }
+
+    notifications.value = list
+  } catch (e) {
+    console.error('Fetch notifications error:', e)
+  }
+}
+
+const markAsRead = (item: NotificationItem) => {
+  item.read = true
+  showNotificationsPanel.value = false
+  if (item.link) {
+    router.push(item.link)
+  }
+}
+
+const markAllAsRead = () => {
+  notifications.value.forEach(n => n.read = true)
+}
+
+const clearAllNotifications = () => {
+  notifications.value = []
+}
+
+const routeTitleMap: Record<string, string> = {
   '/': '智能儀表盤',
   '/calendar': '休假與行事曆一覽',
   '/Appointment': '預約管理列表',
@@ -241,6 +469,7 @@ onMounted(() => {
   if (window.innerWidth < 768) {
     isCollapsed.value = true
   }
+  fetchNotifications()
 })
 
 const closeSidebarOnMobile = () => {
@@ -249,7 +478,7 @@ const closeSidebarOnMobile = () => {
   }
 }
 
-const getNavLinkClass = (path) => {
+const getNavLinkClass = (path: string) => {
   const isActive = route.path === path
   const baseClass = 'flex items-center transition-all duration-200 whitespace-nowrap overflow-hidden relative group'
   const paddingClass = isCollapsed.value ? 'justify-center px-1 py-2 gap-0' : 'px-3 py-2 gap-3'
@@ -261,7 +490,7 @@ const getNavLinkClass = (path) => {
   return `${baseClass} ${paddingClass} ${activeClass}`
 }
 
-const getIconWrapperClass = (path) => {
+const getIconWrapperClass = (path: string) => {
   const isActive = route.path === path
   const sizeClass = isCollapsed.value ? 'w-7 h-7 rounded-lg text-sm' : 'w-8 h-8 rounded-xl text-[19px]'
   return isActive
@@ -278,10 +507,10 @@ const getIconWrapperClass = (path) => {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(21, 67, 55, 0.2);
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(21, 67, 55, 0.4);
 }
 </style>

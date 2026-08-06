@@ -8,9 +8,8 @@ const backendUrl = config.public.backendUrl
 const currentTab = ref<'cash_flow' | 'revenue'>('cash_flow')
 
 const today = new Date()
-const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
 
-const startDateObj = ref<Date | null>(firstDayOfMonth)
+const startDateObj = ref<Date | null>(today)
 const endDateObj = ref<Date | null>(today)
 
 const startDateStr = ref(startDateObj.value?.toISOString().slice(0, 10) || '')
