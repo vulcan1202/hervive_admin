@@ -1,5 +1,6 @@
 // ========================================================
 // 管理員身分驗證與 Session Composable (useAuth.ts)
+// 相容 Chrome/Safari 無痕模式 (Incognito Mode) 與 CORS 跨域 Cookie 限制
 // ========================================================
 import { ref, computed } from 'vue'
 
@@ -13,6 +14,32 @@ const adminUser = ref<AdminUser | null>(null)
 const isCheckingAuth = ref<boolean>(false)
 const isInitialized = ref<boolean>(false)
 
+// 🌟 安全存取 Storage (防範無痕模式下 DOMException 拋錯)
+const getStorageItem = (key: string): string | null => {
+  try {
+    if (import.meta.client && typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem(key)
+    }
+  } catch (e) {}
+  return null
+}
+
+const setStorageItem = (key: string, value: string): void => {
+  try {
+    if (import.meta.client && typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(key, value)
+    }
+  } catch (e) {}
+}
+
+const removeStorageItem = (key: string): void => {
+  try {
+    if (import.meta.client && typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem(key)
+    }
+  } catch (e) {}
+}
+
 export function useAuth() {
   const config = useRuntimeConfig()
   const backendUrl = config.public.backendUrl
@@ -21,11 +48,9 @@ export function useAuth() {
 
   const getAuthHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (import.meta.client) {
-      const token = localStorage.getItem('admin_token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+    const token = getStorageItem('admin_token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
     return headers
   }
@@ -50,9 +75,7 @@ export function useAuth() {
         }
       }
       adminUser.value = null
-      if (import.meta.client) {
-        localStorage.removeItem('admin_token')
-      }
+      removeStorageItem('admin_token')
       return false
     } catch (e) {
       console.error('Check auth error:', e)
@@ -80,8 +103,8 @@ export function useAuth() {
 
       if (res.ok && data.success) {
         adminUser.value = data.data?.admin || { id: 1, username, role: 'admin' }
-        if (import.meta.client && data.data?.token) {
-          localStorage.setItem('admin_token', data.data.token)
+        if (data.data?.token) {
+          setStorageItem('admin_token', data.data.token)
         }
         isInitialized.value = true
         return { success: true, message: data.message || '登入成功' }
@@ -107,9 +130,7 @@ export function useAuth() {
       console.error('Logout error:', e)
     } finally {
       adminUser.value = null
-      if (import.meta.client) {
-        localStorage.removeItem('admin_token')
-      }
+      removeStorageItem('admin_token')
       useRouter().push('/login')
     }
   }
