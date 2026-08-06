@@ -369,14 +369,23 @@ const notifications = ref<NotificationItem[]>([])
 
 const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
+const sortedNotifications = computed(() => {
+  return [...notifications.value].sort((a, b) => {
+    const timeA = new Date(a.time ? a.time.replace(/-/g, '/') : 0).getTime() || 0
+    const timeB = new Date(b.time ? b.time.replace(/-/g, '/') : 0).getTime() || 0
+    return timeB - timeA
+  })
+})
+
 const filteredNotifications = computed(() => {
+  let list = sortedNotifications.value
   if (activeNotificationTab.value === 'appointment') {
-    return notifications.value.filter(n => n.type === 'appointment')
+    return list.filter(n => n.type === 'appointment')
   }
   if (activeNotificationTab.value === 'financial') {
-    return notifications.value.filter(n => n.type === 'financial_weekly' || n.type === 'financial_monthly')
+    return list.filter(n => n.type === 'financial_weekly' || n.type === 'financial_monthly')
   }
-  return notifications.value
+  return list
 })
 
 const getAuthHeaders = (): Record<string, string> => {
