@@ -174,11 +174,14 @@ const openStockModal = (product: Product, trans?: InventoryTransaction) => {
   showStockModal.value = true
 }
 
-const handleTypeChange = (product: Product) => {
-  if (isEditingStock.value) return
-  if (stockForm.type === 'purchase') stockForm.unit_price = product.cost_price
-  else if (stockForm.type === 'sale') stockForm.unit_price = product.selling_price
-  else stockForm.unit_price = 0
+const handleTypeChange = (product?: Product) => {
+  if (stockForm.type === 'adjustment' || stockForm.type === 'usage') {
+    stockForm.unit_price = 0
+  } else if (!isEditingStock.value && product) {
+    if (stockForm.type === 'purchase') stockForm.unit_price = product.cost_price
+    else if (stockForm.type === 'sale') stockForm.unit_price = product.selling_price
+    else stockForm.unit_price = 0
+  }
 }
 
 // 送出產品基本資料
@@ -209,8 +212,11 @@ const handleProductSubmit = async () => {
 
 // 送出庫存異動
 const handleStockSubmit = async () => {
-  if (!stockForm.quantity || stockForm.quantity === 0) {
+  if (stockForm.type !== 'adjustment' && (stockForm.quantity === undefined || stockForm.quantity === null || stockForm.quantity === 0)) {
     return showToast('變動數量不能為 0，請輸入有效數量', true)
+  }
+  if (stockForm.type === 'adjustment' || stockForm.type === 'usage') {
+    stockForm.unit_price = 0
   }
   if (!stockForm.date) {
     return showToast('請選擇發生日期', true)
@@ -734,13 +740,28 @@ onMounted(() => { fetchProducts() })
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">變動數量</label>
-              <input type="number" v-model.number="stockForm.quantity" required min="1" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
+              <input 
+                type="number" 
+                v-model.number="stockForm.quantity" 
+                required 
+                class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" 
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">單價 ($)</label>
-              <input type="number" v-model.number="stockForm.unit_price" required min="0" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
+              <input 
+                type="number" 
+                v-model.number="stockForm.unit_price" 
+                required 
+                min="0" 
+                :disabled="stockForm.type === 'adjustment' || stockForm.type === 'usage'" 
+                class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" 
+              />
             </div>
           </div>
+          <p v-if="stockForm.type === 'adjustment'" class="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 p-2.5 rounded-xl leading-relaxed">
+            💡 <b>庫存盤點重置模式</b>：數量可設定為 0 或盤點調整數，單價固定為 $0 且不可編輯，100% 不影響財務報表與收支帳目。
+          </p>
 
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">發生日期</label>
