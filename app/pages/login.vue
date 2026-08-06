@@ -9,7 +9,7 @@ definePageMeta({
 const { login } = useAuth()
 const router = useRouter()
 
-const username = ref('admin')
+const username = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
