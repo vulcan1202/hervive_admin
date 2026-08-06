@@ -348,27 +348,41 @@ const filteredNotifications = computed(() => {
   return notifications.value
 })
 
-const getTaiwanDateString = (dateObj: Date = new Date()) => {
+const getTaiwanDateTimeDetails = (dateObj: Date = new Date()) => {
   const formatter = new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false
   });
   const parts = formatter.formatToParts(dateObj);
-  const year = parts.find(p => p.type === 'year')?.value;
-  const month = parts.find(p => p.type === 'month')?.value;
-  const day = parts.find(p => p.type === 'day')?.value;
-  return `${year}-${month}-${day}`;
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  
+  const dateStr = `${year}-${month}-${day}`;
+  const taiwanDate = new Date(`${dateStr}T00:00:00+08:00`);
+  const dayOfWeek = taiwanDate.getDay(); // 0 = 禮拜日
+
+  const lastDayNum = new Date(Number(year), Number(month), 0).getDate();
+  const isLastDayOfMonth = (parseInt(day, 10) === lastDayNum);
+
+  return { year, month, day, hour, dayOfWeek, isLastDayOfMonth, dateStr };
 }
 
-// 🌟 自動獲取與生成【新確認預約】與【每週 / 每月財報】推播訊息
+const getTaiwanDateString = (dateObj: Date = new Date()) => {
+  return getTaiwanDateTimeDetails(dateObj).dateStr
+}
+
+// 🌟 自動獲取與生成【新確認預約】與【每週 / 每月財報 (禮拜日與月底 22:00)】推播訊息
 const fetchNotifications = async () => {
   try {
     const list: NotificationItem[] = []
-    const todayStr = getTaiwanDateString()
-    const yearMonth = todayStr.slice(0, 7)
+    const taiwanTime = getTaiwanDateTimeDetails()
 
     // 1. 新確認預約通知推播 (GET /api/appointments)
     const apptRes = await fetch(`${backendUrl}/api/appointments`).then(r => r.ok ? r.json() : null)
@@ -391,48 +405,61 @@ const fetchNotifications = async () => {
       })
     }
 
-    // 2. 每週與每月財報通知推播 (GET /api/financial-summary)
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-    const startOfWeekStr = getTaiwanDateString(startOfWeek)
+    // 2. 周財報推播 (條件：禮拜日晚上 10 點 (22:00) 以後推播)
+    const isSundayNight = (taiwanTime.dayOfWeek === 0 && taiwanTime.hour >= 22)
+    if (isSundayNight) {
+      const now = new Date()
+      const startOfWeek = new Date(now)
+      startOfWeek.setDate(now.getDate() - 6) // 當週週一至週日
+      const startOfWeekStr = getTaiwanDateString(startOfWeek)
 
-    const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${startOfWeekStr}&end_date=${todayStr}`).then(r => r.ok ? r.json() : null)
-    if (finRes && finRes.data) {
-      const summary = finRes.data
-      const weeklyRev = summary.revenue_recognition?.total_recognized_revenue || 0
-      const netCash = summary.cash_flow?.net_cash_flow || 0
+      const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${startOfWeekStr}&end_date=${taiwanTime.dateStr}`).then(r => r.ok ? r.json() : null)
+      if (finRes && finRes.data) {
+        const summary = finRes.data
+        const weeklyRev = summary.revenue_recognition?.total_recognized_revenue || 0
+        const netCash = summary.cash_flow?.net_cash_flow || 0
 
-      // 週財報推播卡片
-      list.push({
-        id: `fin-weekly-${startOfWeekStr}`,
-        type: 'financial_weekly',
-        title: `【週財報推播】本週門市營收實質履約統計`,
-        message: `當週實質履約營收 NT$ ${weeklyRev.toLocaleString()} | 現金淨流入 NT$ ${netCash.toLocaleString()}`,
-        time: `${startOfWeekStr} ~ ${todayStr}`,
-        read: false,
-        link: '/analytics',
-        badgeText: '週財報',
-        badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
-        icon: 'mdi:chart-timeline-variant-shimmer',
-        iconBg: 'bg-purple-50 text-purple-600 border border-purple-200'
-      })
+        list.push({
+          id: `fin-weekly-${startOfWeekStr}`,
+          type: 'financial_weekly',
+          title: `【週財報推播】本週門市營收實質履約統計`,
+          message: `禮拜日 22:00 定時推播：當週實質履約營收 NT$ ${weeklyRev.toLocaleString()} | 現金淨流入 NT$ ${netCash.toLocaleString()}`,
+          time: `週日 22:00 定時推播 (${startOfWeekStr} ~ ${taiwanTime.dateStr})`,
+          read: false,
+          link: '/analytics',
+          badgeText: '週日 22:00 推播',
+          badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
+          icon: 'mdi:chart-timeline-variant-shimmer',
+          iconBg: 'bg-purple-50 text-purple-600 border border-purple-200'
+        })
+      }
+    }
 
-      // 月財報推播卡片
-      list.push({
-        id: `fin-monthly-${yearMonth}`,
-        type: 'financial_monthly',
-        title: `【月財報推播】${yearMonth} 月份門市營運綜合結算`,
-        message: `當期累積實質履約營收 NT$ ${weeklyRev.toLocaleString()}，門市財務帳目已登錄！`,
-        time: yearMonth,
-        read: false,
-        link: '/finance',
-        badgeText: '月財報',
-        badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
-        icon: 'mdi:finance',
-        iconBg: 'bg-amber-50 text-amber-600 border border-amber-200'
-      })
+    // 3. 月財報推播 (條件：每月最後一天晚上 10 點 (22:00) 以後推播)
+    const isMonthEndNight = (taiwanTime.isLastDayOfMonth && taiwanTime.hour >= 22)
+    if (isMonthEndNight) {
+      const monthStart = `${taiwanTime.year}-${taiwanTime.month}-01`
+      const monthEnd = taiwanTime.dateStr
+      const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${monthStart}&end_date=${monthEnd}`).then(r => r.ok ? r.json() : null)
+      if (finRes && finRes.data) {
+        const summary = finRes.data
+        const monthlyRev = summary.revenue_recognition?.total_recognized_revenue || 0
+        const netCash = summary.cash_flow?.net_cash_flow || 0
+
+        list.push({
+          id: `fin-monthly-${taiwanTime.year}-${taiwanTime.month}`,
+          type: 'financial_monthly',
+          title: `【月財報推播】${taiwanTime.year}-${taiwanTime.month} 月份門市營運綜合結算`,
+          message: `月底 22:00 定時推播：當月累積實質履約總營收 NT$ ${monthlyRev.toLocaleString()} | 淨現金流 NT$ ${netCash.toLocaleString()}`,
+          time: `月底 22:00 定時推播 (${monthStart} ~ ${monthEnd})`,
+          read: false,
+          link: '/finance',
+          badgeText: '月底 22:00 推播',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+          icon: 'mdi:finance',
+          iconBg: 'bg-amber-50 text-amber-600 border border-amber-200'
+        })
+      }
     }
 
     notifications.value = list
