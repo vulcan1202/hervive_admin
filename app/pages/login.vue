@@ -42,33 +42,6 @@ const handleLogin = async () => {
     isLoading.value = false
   }
 }
-
-// 快速初始化預設管理員帳號 (若資料庫尚無管理員帳號)
-const handleSeedAdmin = async () => {
-  const config = useRuntimeConfig()
-  const backendUrl = config.public.backendUrl
-  isLoading.value = true
-  errorMessage.value = ''
-  try {
-    const res = await fetch(`${backendUrl}/api/admin/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin', password: 'admin123', role: 'admin' })
-    })
-    const data = await res.json()
-    if (res.ok && data.success) {
-      successMessage.value = '✅ 已成功建立預設管理員 (admin / admin123)'
-      username.value = 'admin'
-      password.value = 'admin123'
-    } else {
-      errorMessage.value = data.error || data.message || '預設管理員已存在'
-    }
-  } catch (e) {
-    errorMessage.value = '初始化失敗'
-  } finally {
-    isLoading.value = false
-  }
-}
 </script>
 
 <template>
@@ -142,20 +115,13 @@ const handleSeedAdmin = async () => {
           </button>
         </form>
 
-        <!-- 輔助與初始化專用連結 -->
+        <!-- 底部安全標示 -->
         <div class="pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
           <span class="flex items-center gap-1">
             <Icon name="mdi:shield-check" class="text-emerald-600" />
-            Argon2id Session
+            Argon2id Encrypted Session
           </span>
-          <button 
-            @click="handleSeedAdmin" 
-            type="button"
-            class="text-[#154337] hover:underline font-medium cursor-pointer"
-            title="若資料庫無帳號，點擊可初始化預設管理員 admin / admin123"
-          >
-            初始化預設管理員
-          </button>
+          <span class="font-mono text-[10px] text-gray-400">Hervive Auth v2.4</span>
         </div>
 
       </div>
