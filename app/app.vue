@@ -1,5 +1,11 @@
 <template>
-  <div class="flex h-screen w-full bg-[#FAF4EE] font-sans text-gray-800 overflow-hidden box-border relative">
+  <!-- 1. 登入頁面裸頁渲染 (無後台 Layout 邊框) -->
+  <div v-if="route.path === '/login'" class="min-h-screen w-full bg-[#FAF4EE]">
+    <NuxtPage />
+  </div>
+
+  <!-- 2. 後台管理系統主架構 -->
+  <div v-else class="flex h-screen w-full bg-[#FAF4EE] font-sans text-gray-800 overflow-hidden box-border relative">
     
     <!-- 手機版：側邊欄展開時的半透明深色遮罩 -->
     <div 
@@ -284,15 +290,22 @@
             </div>
           </div>
 
-          <!-- 管理員 Avatar -->
-          <div class="flex items-center gap-2.5 py-1 pr-3 pl-1.5 bg-[#FAF4EE] border border-[#154337]/10 rounded-full cursor-pointer hover:border-[#154337]/30 transition group">
-            <div class="w-7 h-7 bg-[#154337] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs group-hover:scale-105 transition">
-              H
+          <!-- 管理員 Avatar & 登出按鈕 -->
+          <div class="flex items-center gap-2 py-1 pr-2.5 pl-1.5 bg-[#FAF4EE] border border-[#154337]/10 rounded-full transition group">
+            <div class="w-7 h-7 bg-[#154337] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs uppercase">
+              {{ (adminUser?.username || 'A').slice(0, 1) }}
             </div>
             <div class="hidden sm:flex flex-col text-left">
-              <span class="text-xs font-semibold text-gray-800 leading-tight">系統管理員</span>
-              <span class="text-[10px] text-emerald-700 font-mono">Store Admin</span>
+              <span class="text-xs font-semibold text-gray-800 leading-tight">{{ adminUser?.username || '系統管理員' }}</span>
+              <span class="text-[10px] text-emerald-700 font-mono uppercase">{{ adminUser?.role || 'Store Admin' }}</span>
             </div>
+            <button 
+              @click="logout" 
+              class="ml-1 p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition cursor-pointer"
+              title="登出系統"
+            >
+              <Icon name="mdi:logout" size="16" />
+            </button>
           </div>
         </div>
       </header>
@@ -308,6 +321,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from './composables/useAuth'
 
 const config = useRuntimeConfig()
 const backendUrl = config.public.backendUrl
@@ -315,6 +329,8 @@ const backendUrl = config.public.backendUrl
 const route = useRoute()
 const router = useRouter()
 const isCollapsed = ref(false)
+
+const { adminUser, logout } = useAuth()
 
 // 🌟 通知中心狀態與型別宣告
 const showNotificationsPanel = ref(false)
@@ -410,7 +426,7 @@ const fetchNotifications = async () => {
     if (isSundayNight) {
       const now = new Date()
       const startOfWeek = new Date(now)
-      startOfWeek.setDate(now.getDate() - 6) // 當週週一至週日
+      startOfWeek.setDate(now.getDate() - 6)
       const startOfWeekStr = getTaiwanDateString(startOfWeek)
 
       const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${startOfWeekStr}&end_date=${taiwanTime.dateStr}`).then(r => r.ok ? r.json() : null)
@@ -503,7 +519,9 @@ onMounted(() => {
   if (window.innerWidth < 768) {
     isCollapsed.value = true
   }
-  fetchNotifications()
+  if (route.path !== '/login') {
+    fetchNotifications()
+  }
 })
 
 const closeSidebarOnMobile = () => {
