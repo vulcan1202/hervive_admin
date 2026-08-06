@@ -80,19 +80,30 @@ const getCardStyle = (originalIndex: number) => {
   }
 }
 
+const getTaiwanDateString = (dateObj: Date = new Date()) => {
+  const formatter = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(dateObj);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
 onMounted(async () => {
-  const today = new Date()
-  const tzOffset = 8 * 60
-  const localToday = new Date(today.getTime() + tzOffset * 60000)
-  const todayStr = localToday.toISOString().split('T')[0]!
-  
-  const year = localToday.getFullYear()
-  const month = String(localToday.getMonth() + 1).padStart(2, '0')
+  const todayStr = getTaiwanDateString()
+  const todayParts = todayStr.split('-')
+  const year = todayParts[0]
+  const month = todayParts[1]
   const monthStart = `${year}-${month}-01`
   
-  const nextMonth = new Date(year, localToday.getMonth() + 1, 1)
-  const lastDayObj = new Date(nextMonth.getTime() - 86400000)
-  const monthEnd = lastDayObj.toISOString().split('T')[0]!
+  const lastDayNum = new Date(Number(year), Number(month), 0).getDate()
+  const monthEnd = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`
 
   try {
     const [finRes, apptRes, prodRes] = await Promise.all([
@@ -115,7 +126,10 @@ onMounted(async () => {
         (a.status === 'pending' || a.status === 'confirmed')
       ).length
 
-      todayAppointmentsCount.value = appts.filter((a: any) => a.date === todayStr).length
+      todayAppointmentsCount.value = appts.filter((a: any) => {
+        const createdDate = a.created_at ? a.created_at.split('T')[0].split(' ')[0] : ''
+        return createdDate === todayStr || a.date === todayStr
+      }).length
     }
 
     if (prodRes.ok) {
