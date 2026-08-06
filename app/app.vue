@@ -394,7 +394,7 @@ const fetchNotifications = async () => {
           type: 'appointment',
           title: `【預約通知】新增預約 - ${a.client_name}`,
           message: `預約時間：${a.date} ${a.start_time} | 預約單號：${a.appointment_code}`,
-          time: a.date,
+          time: a.created_at ? a.created_at.slice(0, 16) : a.date,
           read: false,
           link: '/Appointment',
           badgeText: a.status === 'confirmed' ? '預約已確認' : '待服務',
