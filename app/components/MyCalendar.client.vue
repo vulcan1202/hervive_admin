@@ -92,7 +92,7 @@ const displayDate = computed(() => {
     :auto-apply="true"
     :teleport="true"
   >
-    <template #dp-input="{ onClick }">
+    <template #dp-input="{ onClick }: any">
       <div class="relative w-full">
         <input
           :class="[

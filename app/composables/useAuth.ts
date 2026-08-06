@@ -19,6 +19,17 @@ export function useAuth() {
 
   const isAuthenticated = computed(() => !!adminUser.value)
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (import.meta.client) {
+      const token = localStorage.getItem('admin_token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+    return headers
+  }
+
   /**
    * 1. 檢查當前 Session 身分狀態 (GET /api/admin/me)
    */
@@ -27,7 +38,7 @@ export function useAuth() {
     try {
       const res = await fetch(`${backendUrl}/api/admin/me`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include'
       })
 
@@ -39,6 +50,9 @@ export function useAuth() {
         }
       }
       adminUser.value = null
+      if (import.meta.client) {
+        localStorage.removeItem('admin_token')
+      }
       return false
     } catch (e) {
       console.error('Check auth error:', e)
@@ -66,6 +80,9 @@ export function useAuth() {
 
       if (res.ok && data.success) {
         adminUser.value = data.data?.admin || { id: 1, username, role: 'admin' }
+        if (import.meta.client && data.data?.token) {
+          localStorage.setItem('admin_token', data.data.token)
+        }
         isInitialized.value = true
         return { success: true, message: data.message || '登入成功' }
       } else {
@@ -83,13 +100,16 @@ export function useAuth() {
     try {
       await fetch(`${backendUrl}/api/admin/logout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include'
       })
     } catch (e) {
       console.error('Logout error:', e)
     } finally {
       adminUser.value = null
+      if (import.meta.client) {
+        localStorage.removeItem('admin_token')
+      }
       useRouter().push('/login')
     }
   }
