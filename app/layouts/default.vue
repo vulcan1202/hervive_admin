@@ -158,7 +158,7 @@
             <Icon name="mdi:menu" size="22" />
           </button>
 
-          <!-- 動態麵包屑導航與頁面徽章 (針對手機端進行寬度適應與截斷) -->
+          <!-- 動態麵包屑導航與頁面徽章 -->
           <div class="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
             <span class="text-gray-400 hidden sm:inline-flex items-center gap-1 font-medium shrink-0">
               <Icon name="mdi:spa" class="text-[#154337]" />
@@ -186,7 +186,7 @@
             </div>
           </div>
 
-          <!-- 🌟 通知中心按鈕與全視窗/手機端適應 Dropdown & Sheet Drawer -->
+          <!-- 🌟 管理員獨立通知中心按鈕與雲端持久化 Drawer Panel -->
           <div class="relative">
             <!-- 點擊遮罩 (點擊外部自動關閉通知視窗) -->
             <div 
@@ -210,7 +210,7 @@
               </span>
             </button>
 
-            <!-- 🌟 浮動通知面板 / 手機端智慧抗溢出 Drawer Panel -->
+            <!-- 🌟 浮動通知面板 / 支援單筆物理刪除與雲端同步 Drawer Panel -->
             <div 
               v-if="showNotificationsPanel" 
               class="fixed inset-x-2 top-[68px] sm:top-full sm:bottom-auto sm:absolute sm:right-0 sm:left-auto sm:inset-x-auto sm:mt-3 w-auto sm:w-96 bg-white rounded-3xl shadow-2xl border border-[#154337]/15 z-[60] overflow-hidden animate-fade-in max-h-[82vh] sm:max-h-[500px] flex flex-col"
@@ -227,7 +227,7 @@
                 <div class="flex items-center gap-2 text-xs">
                   <button @click="markAllAsRead" class="text-gray-600 hover:text-[#154337] transition cursor-pointer font-bold">全部已讀</button>
                   <span class="text-gray-300">|</span>
-                  <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空</button>
+                  <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空全部</button>
                   <button @click="showNotificationsPanel = false" class="sm:hidden ml-1 p-1 text-gray-400 hover:text-gray-700 cursor-pointer">
                     <Icon name="mdi:close" size="18" />
                   </button>
@@ -256,7 +256,7 @@
                 </button>
               </div>
 
-              <!-- Notification Item List -->
+              <!-- Notification Item List (含單筆物理刪除) -->
               <div class="flex-1 overflow-y-auto divide-y divide-gray-100 p-2 custom-scrollbar">
                 <div v-if="filteredNotifications.length === 0" class="py-10 text-center text-gray-400 text-xs">
                   尚無任何通知推播訊息
@@ -266,14 +266,14 @@
                   :key="item.id"
                   @click="markAsRead(item)"
                   :class="[
-                    'p-3 hover:bg-[#FAF4EE]/70 transition cursor-pointer flex gap-2.5 items-start relative rounded-2xl my-1 border border-transparent hover:border-[#154337]/10 active:scale-[0.99]',
+                    'p-3 hover:bg-[#FAF4EE]/70 transition cursor-pointer flex gap-2.5 items-start relative rounded-2xl my-1 border border-transparent hover:border-[#154337]/10 active:scale-[0.99] group/item',
                     !item.read ? 'bg-emerald-50/50 font-medium' : 'opacity-75 bg-white'
                   ]"
                 >
                   <div :class="['w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs', item.iconBg]">
                     <Icon :name="item.icon" class="text-lg" />
                   </div>
-                  <div class="flex-1 min-w-0">
+                  <div class="flex-1 min-w-0 pr-5">
                     <div class="flex items-center justify-between gap-1 mb-0.5">
                       <span class="font-bold text-xs text-gray-900 truncate">{{ item.title }}</span>
                       <span :class="['px-2 py-0.5 rounded-full text-[9px] font-bold border shrink-0', item.badgeClass]">
@@ -289,7 +289,17 @@
                       </span>
                     </div>
                   </div>
-                  <span v-if="!item.read" class="w-2 h-2 rounded-full bg-rose-500 absolute top-3 right-3 shadow-xs"></span>
+
+                  <!-- 🌟 單筆通知物理刪除按鈕 (相容手機與電腦) -->
+                  <button 
+                    @click.stop="deleteSingleNotification(item)" 
+                    class="absolute top-2.5 right-2.5 p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                    title="刪除此筆通知"
+                  >
+                    <Icon name="mdi:trash-can-outline" size="15" />
+                  </button>
+
+                  <span v-if="!item.read" class="w-2 h-2 rounded-full bg-rose-500 absolute top-3 right-8 shadow-xs"></span>
                 </div>
               </div>
             </div>
@@ -369,140 +379,90 @@ const filteredNotifications = computed(() => {
   return notifications.value
 })
 
-const getTaiwanDateTimeDetails = (dateObj: Date = new Date()) => {
-  const formatter = new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-  const parts = formatter.formatToParts(dateObj);
-  const year = parts.find(p => p.type === 'year')?.value || '';
-  const month = parts.find(p => p.type === 'month')?.value || '';
-  const day = parts.find(p => p.type === 'day')?.value || '';
-  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
-  
-  const dateStr = `${year}-${month}-${day}`;
-  const taiwanDate = new Date(`${dateStr}T00:00:00+08:00`);
-  const dayOfWeek = taiwanDate.getDay();
-
-  const lastDayNum = new Date(Number(year), Number(month), 0).getDate();
-  const isLastDayOfMonth = (parseInt(day, 10) === lastDayNum);
-
-  return { year, month, day, hour, dayOfWeek, isLastDayOfMonth, dateStr };
+const getAuthHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (import.meta.client && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const token = localStorage.getItem('admin_token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    } catch (e) {}
+  }
+  return headers
 }
 
-const getTaiwanDateString = (dateObj: Date = new Date()) => {
-  return getTaiwanDateTimeDetails(dateObj).dateStr
-}
-
-// 自動獲取與生成推播訊息
+// 🌟 核心：從雲端後端 D1 讀取與當前 Admin 綁定且未被實體刪除的通知
 const fetchNotifications = async () => {
   try {
-    const list: NotificationItem[] = []
-    const taiwanTime = getTaiwanDateTimeDetails()
+    const res = await fetch(`${backendUrl}/api/admin/notifications`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    }).then(r => r.ok ? r.json() : null)
 
-    // 1. 新確認預約通知推播 (GET /api/appointments)
-    const apptRes = await fetch(`${backendUrl}/api/appointments`).then(r => r.ok ? r.json() : null)
-    if (apptRes && apptRes.data) {
-      const confirmedAppts = apptRes.data.filter((a: any) => a.status === 'confirmed' || a.status === 'pending')
-      confirmedAppts.slice(0, 5).forEach((a: any) => {
-        list.push({
-          id: `appt-${a.id}`,
-          type: 'appointment',
-          title: `【預約通知】新增預約 - ${a.client_name}`,
-          message: `預約時間：${a.date} ${a.start_time} | 預約單號：${a.appointment_code}`,
-          time: a.created_at ? a.created_at.slice(0, 16) : a.date,
-          read: false,
-          link: '/Appointment',
-          badgeText: a.status === 'confirmed' ? '預約已確認' : '待服務',
-          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-          icon: 'mdi:calendar-check',
-          iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-        })
-      })
+    if (res && res.data) {
+      notifications.value = res.data
     }
-
-    // 2. 周財報推播 (條件：禮拜日晚上 10 點 (22:00) 以後推播)
-    const isSundayNight = (taiwanTime.dayOfWeek === 0 && taiwanTime.hour >= 22)
-    if (isSundayNight) {
-      const now = new Date()
-      const startOfWeek = new Date(now)
-      startOfWeek.setDate(now.getDate() - 6)
-      const startOfWeekStr = getTaiwanDateString(startOfWeek)
-
-      const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${startOfWeekStr}&end_date=${taiwanTime.dateStr}`).then(r => r.ok ? r.json() : null)
-      if (finRes && finRes.data) {
-        const summary = finRes.data
-        const weeklyRev = summary.revenue_recognition?.total_recognized_revenue || 0
-        const netCash = summary.cash_flow?.net_cash_flow || 0
-
-        list.push({
-          id: `fin-weekly-${startOfWeekStr}`,
-          type: 'financial_weekly',
-          title: `【週財報推播】本週門市營收實質履約統計`,
-          message: `禮拜日 22:00 定時推播：當週實質履約營收 NT$ ${weeklyRev.toLocaleString()} | 現金淨流入 NT$ ${netCash.toLocaleString()}`,
-          time: `週日 22:00 定時推播 (${startOfWeekStr} ~ ${taiwanTime.dateStr})`,
-          read: false,
-          link: '/analytics',
-          badgeText: '週日 22:00 推播',
-          badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
-          icon: 'mdi:chart-timeline-variant-shimmer',
-          iconBg: 'bg-purple-50 text-purple-600 border border-purple-200'
-        })
-      }
-    }
-
-    // 3. 月財報推播 (條件：每月最後一天晚上 10 點 (22:00) 以後推播)
-    const isMonthEndNight = (taiwanTime.isLastDayOfMonth && taiwanTime.hour >= 22)
-    if (isMonthEndNight) {
-      const monthStart = `${taiwanTime.year}-${taiwanTime.month}-01`
-      const monthEnd = taiwanTime.dateStr
-      const finRes = await fetch(`${backendUrl}/api/financial-summary?start_date=${monthStart}&end_date=${monthEnd}`).then(r => r.ok ? r.json() : null)
-      if (finRes && finRes.data) {
-        const summary = finRes.data
-        const monthlyRev = summary.revenue_recognition?.total_recognized_revenue || 0
-        const netCash = summary.cash_flow?.net_cash_flow || 0
-
-        list.push({
-          id: `fin-monthly-${taiwanTime.year}-${taiwanTime.month}`,
-          type: 'financial_monthly',
-          title: `【月財報推播】${taiwanTime.year}-${taiwanTime.month} 月份門市營運綜合結算`,
-          message: `月底 22:00 定時推播：當月累積實質履約總營收 NT$ ${monthlyRev.toLocaleString()} | 淨現金流 NT$ ${netCash.toLocaleString()}`,
-          time: `月底 22:00 定時推播 (${monthStart} ~ ${monthEnd})`,
-          read: false,
-          link: '/finance',
-          badgeText: '月底 22:00 推播',
-          badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
-          icon: 'mdi:finance',
-          iconBg: 'bg-amber-50 text-amber-600 border border-amber-200'
-        })
-      }
-    }
-
-    notifications.value = list
   } catch (e) {
     console.error('Fetch notifications error:', e)
   }
 }
 
-const markAsRead = (item: NotificationItem) => {
+// 🌟 標示單筆為已讀並與 D1 雲端同步
+const markAsRead = async (item: NotificationItem) => {
   item.read = true
   showNotificationsPanel.value = false
+  
+  try {
+    await fetch(`${backendUrl}/api/admin/notifications/mark-read`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ notification_id: item.id })
+    })
+  } catch (e) {}
+
   if (item.link) {
     router.push(item.link)
   }
 }
 
-const markAllAsRead = () => {
+// 🌟 全部標示為已讀並同步雲端
+const markAllAsRead = async () => {
   notifications.value.forEach(n => n.read = true)
+  try {
+    await fetch(`${backendUrl}/api/admin/notifications/mark-read`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ mark_all: true })
+    })
+  } catch (e) {}
 }
 
-const clearAllNotifications = () => {
+// 🌟 刪除單筆通知：從 D1 實體物理刪除 (Delete Single Notification)
+const deleteSingleNotification = async (item: NotificationItem) => {
+  notifications.value = notifications.value.filter(n => n.id !== item.id)
+  try {
+    await fetch(`${backendUrl}/api/admin/notifications?notification_id=${item.id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    })
+  } catch (e) {}
+}
+
+// 🌟 全部清空通知：從 D1 實體物理刪除該 Admin 所有紀錄，防止資料庫肥大 (Clear All)
+const clearAllNotifications = async () => {
   notifications.value = []
+  try {
+    await fetch(`${backendUrl}/api/admin/notifications?clear_all=true`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      credentials: 'include'
+    })
+  } catch (e) {}
 }
 
 const routeTitleMap: Record<string, string> = {
