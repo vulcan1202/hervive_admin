@@ -186,7 +186,7 @@
             </div>
           </div>
 
-          <!-- 🌟 管理員獨立通知中心按鈕與即時同步 Dropdown Panel -->
+          <!-- 🌟 管理員獨立通知中心按鈕與雲端持久化 Drawer Panel -->
           <div class="relative">
             <!-- 點擊遮罩 (點擊外部自動關閉通知視窗) -->
             <div 
@@ -195,11 +195,11 @@
               @click="showNotificationsPanel = false"
             ></div>
 
-            <!-- 鈴鐺觸發按鈕 (點擊自動觸發即時同步) -->
+            <!-- 鈴鐺觸發按鈕 -->
             <button 
               class="relative p-2 sm:p-2.5 rounded-full text-gray-600 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95 z-50"
-              title="通知中心 (點擊開啟並即時同步)"
-              @click="toggleNotificationsPanel"
+              title="通知中心"
+              @click="showNotificationsPanel = !showNotificationsPanel; if (showNotificationsPanel) fetchNotifications()"
             >
               <Icon name="mdi:bell-outline" class="text-xl" />
               <span 
@@ -210,12 +210,12 @@
               </span>
             </button>
 
-            <!-- 🌟 浮動通知面板 / 包含手動刷新與最上方最新通知排序 Drawer Panel -->
+            <!-- 🌟 浮動通知面板 / 支援單筆物理刪除與雲端同步 Drawer Panel -->
             <div 
               v-if="showNotificationsPanel" 
               class="fixed inset-x-2 top-[68px] sm:top-full sm:bottom-auto sm:absolute sm:right-0 sm:left-auto sm:inset-x-auto sm:mt-3 w-auto sm:w-96 bg-white rounded-3xl shadow-2xl border border-[#154337]/15 z-[60] overflow-hidden animate-fade-in max-h-[82vh] sm:max-h-[500px] flex flex-col"
             >
-              <!-- Panel Header (含手動刷新按鈕) -->
+              <!-- Panel Header -->
               <div class="p-3.5 sm:p-4 bg-[#FAF4EE] border-b border-[#154337]/10 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
                   <Icon name="mdi:bell-ring" class="text-[#154337] text-base sm:text-lg" />
@@ -224,21 +224,10 @@
                     {{ unreadCount }} 未讀
                   </span>
                 </div>
-                
-                <!-- 手動刷新、全部已讀與清空按鈕 -->
-                <div class="flex items-center gap-1.5 text-xs">
-                  <button 
-                    @click="fetchNotifications" 
-                    class="text-gray-600 hover:text-[#154337] transition cursor-pointer font-bold flex items-center gap-0.5 active:scale-95"
-                    title="手動刷新通知"
-                  >
-                    <Icon name="mdi:refresh" :class="['text-xs', isFetchingNotifications ? 'animate-spin text-[#154337]' : '']" />
-                    <span>刷新</span>
-                  </button>
-                  <span class="text-gray-300">|</span>
+                <div class="flex items-center gap-2 text-xs">
                   <button @click="markAllAsRead" class="text-gray-600 hover:text-[#154337] transition cursor-pointer font-bold">全部已讀</button>
                   <span class="text-gray-300">|</span>
-                  <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空</button>
+                  <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空全部</button>
                   <button @click="showNotificationsPanel = false" class="sm:hidden ml-1 p-1 text-gray-400 hover:text-gray-700 cursor-pointer">
                     <Icon name="mdi:close" size="18" />
                   </button>
@@ -267,7 +256,7 @@
                 </button>
               </div>
 
-              <!-- Notification Item List (最上方永遠是最新的通知排序) -->
+              <!-- Notification Item List (含單筆物理刪除) -->
               <div class="flex-1 overflow-y-auto divide-y divide-gray-100 p-2 custom-scrollbar">
                 <div v-if="filteredNotifications.length === 0" class="py-10 text-center text-gray-400 text-xs">
                   尚無任何通知推播訊息
@@ -301,7 +290,7 @@
                     </div>
                   </div>
 
-                  <!-- 單筆通知物理刪除按鈕 -->
+                  <!-- 🌟 單筆通知物理刪除按鈕 (相容手機與電腦) -->
                   <button 
                     @click.stop="deleteSingleNotification(item)" 
                     class="absolute top-2.5 right-2.5 p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
@@ -345,7 +334,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
@@ -360,9 +349,7 @@ const { adminUser, logout } = useAuth()
 
 // 通知中心狀態與型別宣告
 const showNotificationsPanel = ref(false)
-const isFetchingNotifications = ref(false)
 const activeNotificationTab = ref<'all' | 'appointment' | 'financial'>('all')
-let autoPollingTimer: any = null
 
 interface NotificationItem {
   id: string
@@ -382,20 +369,14 @@ const notifications = ref<NotificationItem[]>([])
 
 const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
-// 🌟 確保最上方永遠是最新的通知 (依據時間/ID 從最新到最舊排序)
 const filteredNotifications = computed(() => {
-  let list = notifications.value
   if (activeNotificationTab.value === 'appointment') {
-    list = notifications.value.filter(n => n.type === 'appointment')
-  } else if (activeNotificationTab.value === 'financial') {
-    list = notifications.value.filter(n => n.type === 'financial_weekly' || n.type === 'financial_monthly')
+    return notifications.value.filter(n => n.type === 'appointment')
   }
-
-  return [...list].sort((a, b) => {
-    const timeA = new Date(a.time || 0).getTime()
-    const timeB = new Date(b.time || 0).getTime()
-    return timeB - timeA
-  })
+  if (activeNotificationTab.value === 'financial') {
+    return notifications.value.filter(n => n.type === 'financial_weekly' || n.type === 'financial_monthly')
+  }
+  return notifications.value
 })
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -411,18 +392,8 @@ const getAuthHeaders = (): Record<string, string> => {
   return headers
 }
 
-// 🌟 點擊鈴鐺觸發開關與即時同步
-const toggleNotificationsPanel = () => {
-  showNotificationsPanel.value = !showNotificationsPanel.value
-  if (showNotificationsPanel.value) {
-    fetchNotifications()
-  }
-}
-
 // 🌟 核心：從雲端後端 D1 讀取與當前 Admin 綁定且未被實體刪除的通知
 const fetchNotifications = async () => {
-  if (isFetchingNotifications.value) return
-  isFetchingNotifications.value = true
   try {
     const res = await fetch(`${backendUrl}/api/admin/notifications`, {
       method: 'GET',
@@ -435,12 +406,10 @@ const fetchNotifications = async () => {
     }
   } catch (e) {
     console.error('Fetch notifications error:', e)
-  } finally {
-    isFetchingNotifications.value = false
   }
 }
 
-// 標示單筆為已讀並與 D1 雲端同步
+// 🌟 標示單筆為已讀並與 D1 雲端同步
 const markAsRead = async (item: NotificationItem) => {
   item.read = true
   showNotificationsPanel.value = false
@@ -459,7 +428,7 @@ const markAsRead = async (item: NotificationItem) => {
   }
 }
 
-// 全部標示為已讀並同步雲端
+// 🌟 全部標示為已讀並同步雲端
 const markAllAsRead = async () => {
   notifications.value.forEach(n => n.read = true)
   try {
@@ -472,7 +441,7 @@ const markAllAsRead = async () => {
   } catch (e) {}
 }
 
-// 刪除單筆通知：從 D1 實體物理刪除
+// 🌟 刪除單筆通知：從 D1 實體物理刪除 (Delete Single Notification)
 const deleteSingleNotification = async (item: NotificationItem) => {
   notifications.value = notifications.value.filter(n => n.id !== item.id)
   try {
@@ -484,7 +453,7 @@ const deleteSingleNotification = async (item: NotificationItem) => {
   } catch (e) {}
 }
 
-// 全部清空通知：從 D1 實體物理刪除
+// 🌟 全部清空通知：從 D1 實體物理刪除該 Admin 所有紀錄，防止資料庫肥大 (Clear All)
 const clearAllNotifications = async () => {
   notifications.value = []
   try {
@@ -511,22 +480,60 @@ const currentPageTitle = computed(() => {
   return routeTitleMap[route.path] || '管理控制台'
 })
 
+let lastProbeETag = ''
+let probeIntervalTimer: any = null
+
+// 🌟 輕量探針 (0 D1 讀取邊緣快取保護機制)
+const checkNotificationProbe = async () => {
+  // 1. 若分頁在背景休眠/視窗最小化，完全停止發送探針以保護流量與配額
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+    return
+  }
+
+  try {
+    const headers: Record<string, string> = {
+      ...getAuthHeaders()
+    }
+    if (lastProbeETag) {
+      headers['If-None-Match'] = lastProbeETag
+    }
+
+    const res = await fetch(`${backendUrl}/api/admin/notifications/check-probe`, {
+      method: 'GET',
+      headers,
+      credentials: 'include'
+    })
+
+    const newETag = res.headers.get('ETag')
+    if (newETag) {
+      lastProbeETag = newETag
+    }
+
+    // 2. 只有當收到 HTTP 200 且含有 has_new 訊號時 ➔ 才去拉取一次全量通知
+    if (res.status === 200) {
+      const data = await res.json()
+      if (data && data.has_new) {
+        fetchNotifications()
+      }
+    }
+    // 若收到 304 Not Modified ➔ CDN 邊緣自動處理，完全不觸發 SQL 讀取
+  } catch (e) {}
+}
+
 onMounted(() => {
   if (window.innerWidth < 768) {
     isCollapsed.value = true
   }
   if (route.path !== '/login') {
     fetchNotifications()
-    // 🌟 每 30 秒在背景進行無感靜默自動輪詢
-    autoPollingTimer = setInterval(() => {
-      fetchNotifications()
-    }, 30000)
+    // 啟動 15 秒輕量探針輪詢
+    probeIntervalTimer = setInterval(checkNotificationProbe, 15000)
   }
 })
 
 onUnmounted(() => {
-  if (autoPollingTimer) {
-    clearInterval(autoPollingTimer)
+  if (probeIntervalTimer) {
+    clearInterval(probeIntervalTimer)
   }
 })
 
