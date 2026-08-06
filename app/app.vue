@@ -1,8 +1,8 @@
 <template>
   <div class="h-screen w-full bg-[#FAF4EE] font-sans text-gray-800 overflow-hidden box-border relative">
     
-    <!-- 全域初始化 Session 檢查中 Loading (避免畫面閃爍或頁面空白) -->
-    <div v-if="isCheckingAuth && !isInitialized" class="fixed inset-0 bg-[#FAF4EE] z-[999] flex items-center justify-center">
+    <!-- 全域初始化 Session 檢查中 Loading (僅在非登入頁且尚未初始化時顯示) -->
+    <div v-if="route.path !== '/login' && isCheckingAuth && !isInitialized" class="fixed inset-0 bg-[#FAF4EE] z-[999] flex items-center justify-center">
       <div class="flex flex-col items-center gap-3">
         <div class="w-10 h-10 border-3 border-[#154337]/20 border-t-[#154337] rounded-full animate-spin"></div>
         <span class="text-xs font-bold text-[#154337] font-sans tracking-wide">系統安全驗證中...</span>

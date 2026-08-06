@@ -10,7 +10,7 @@ export interface AdminUser {
 }
 
 const adminUser = ref<AdminUser | null>(null)
-const isCheckingAuth = ref<boolean>(true)
+const isCheckingAuth = ref<boolean>(false)
 const isInitialized = ref<boolean>(false)
 
 export function useAuth() {
@@ -23,6 +23,7 @@ export function useAuth() {
    * 1. 檢查當前 Session 身分狀態 (GET /api/admin/me)
    */
   const checkAuth = async (): Promise<boolean> => {
+    isCheckingAuth.value = true
     try {
       const res = await fetch(`${backendUrl}/api/admin/me`, {
         method: 'GET',
@@ -65,6 +66,7 @@ export function useAuth() {
 
       if (res.ok && data.success) {
         adminUser.value = data.data?.admin || { id: 1, username, role: 'admin' }
+        isInitialized.value = true
         return { success: true, message: data.message || '登入成功' }
       } else {
         return { success: false, message: data.error || data.message || '帳號或密碼錯誤' }
