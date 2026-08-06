@@ -184,6 +184,9 @@ const handleTypeChange = (product: Product) => {
 // 送出產品基本資料
 const handleProductSubmit = async () => {
   if (!productForm.name.trim()) return showToast('請輸入產品名稱', true)
+  if (!isEditingProduct.value) {
+    productForm.stock_quantity = 0
+  }
   const url = `${backendUrl}/api/products`
   const method = isEditingProduct.value ? 'PUT' : 'POST'
 
@@ -686,10 +689,15 @@ onMounted(() => { fetchProducts() })
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">初始庫存數量 (件)</label>
-            <input type="number" v-model.number="productForm.stock_quantity" :disabled="isEditingProduct" min="0" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono disabled:bg-gray-100 disabled:text-gray-400" />
-            <p v-if="isEditingProduct" class="text-[10px] text-gray-400 mt-1">編輯模式下庫存請點擊「庫存異動」進行登記。</p>
+          <!-- 庫存數量說明卡片 (新建檔強制為 0，需透過產銷管理異動) -->
+          <div class="bg-[#FAF4EE]/80 border border-[#154337]/15 p-3.5 rounded-2xl text-xs space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-[#154337]">
+              <Icon name="mdi:information-outline" size="16" />
+              <span>產品庫存規範</span>
+            </div>
+            <p class="text-gray-600 leading-relaxed text-[11px]">
+              建檔時預設庫存為 <span class="font-bold text-[#154337] font-mono">0 件</span>。如需增加進貨或調整庫存，請於產品建檔成功後在列表點擊<span class="font-bold text-[#154337]">「庫存異動」</span>按鈕登記產銷紀錄。
+            </p>
           </div>
 
           <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
