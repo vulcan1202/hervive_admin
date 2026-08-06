@@ -4,14 +4,14 @@
     <!-- 手機版：側邊欄展開時的半透明深色遮罩 -->
     <div 
       v-if="!isCollapsed" 
-      class="fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity backdrop-blur-xs"
+      class="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity backdrop-blur-xs"
       @click="isCollapsed = true"
     ></div>
 
     <!-- 側邊欄 (Hervive 品牌翡翠綠 #154337) -->
     <aside 
       :class="[
-        'bg-[#154337] flex flex-col transition-all duration-300 shadow-[4px_0_20px_rgba(21,67,55,0.1)] z-30 shrink-0 h-full border-r border-white/10 text-white',
+        'bg-[#154337] flex flex-col transition-all duration-300 shadow-[4px_0_20px_rgba(21,67,55,0.1)] z-50 shrink-0 h-full border-r border-white/10 text-white',
         'absolute md:relative',
         isCollapsed ? '-translate-x-full md:translate-x-0 md:w-[52px]' : 'translate-x-0 w-[250px] md:w-[230px]' 
       ]"
@@ -19,7 +19,7 @@
       <!-- 側邊欄頂部 Logo 區 (保留奶茶色背景 #FAF4EE) -->
       <div 
         :class="[
-          'h-[64px] md:h-[72px] flex items-center justify-between border-b border-[#154337]/15 bg-[#FAF4EE] relative box-border transition-all',
+          'h-[60px] md:h-[72px] flex items-center justify-between border-b border-[#154337]/15 bg-[#FAF4EE] relative box-border transition-all',
           isCollapsed ? 'px-1 justify-center' : 'px-4'
         ]"
       >
@@ -50,7 +50,7 @@
       </div>
       
       <!-- 導航選單區塊 -->
-      <nav class="p-3 px-2 flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
+      <nav class="p-2.5 px-2 flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
         
         <!-- 分組 1：核心營運 -->
         <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-white/45 px-3.5 pt-3 pb-1 font-semibold">
@@ -146,79 +146,81 @@
 
     <!-- 主內容區 -->
     <div class="flex-1 flex flex-col overflow-hidden bg-[#FAF4EE] min-w-0 relative z-10">
-      <!-- 頂部列 (Frosted Glass 質感浮動頂欄，relative z-50 確保通知選單全視域最上層) -->
-      <header class="bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 md:px-8 h-[64px] md:h-[72px] shrink-0 box-border border-b border-[#154337]/10 shadow-xs relative z-50">
-        <div class="flex items-center gap-3 text-gray-500 text-sm">
+      <!-- 頂部列 (Frosted Glass 質感浮動頂欄) -->
+      <header class="bg-white/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 md:px-8 h-[60px] md:h-[72px] shrink-0 box-border border-b border-[#154337]/10 shadow-2xs relative z-30">
+        <div class="flex items-center gap-2 sm:gap-3 text-gray-500 text-sm min-w-0">
           <!-- 手機版：漢堡選單按鈕 -->
           <button 
-            class="md:hidden flex items-center justify-center p-2 text-gray-700 hover:bg-[#FAF4EE] rounded-xl transition cursor-pointer"
+            class="md:hidden flex items-center justify-center p-2 text-gray-700 hover:bg-[#FAF4EE] rounded-xl transition cursor-pointer active:scale-95"
             @click="isCollapsed = !isCollapsed"
+            title="選單"
           >
             <Icon name="mdi:menu" size="22" />
           </button>
 
-          <!-- 動態麵包屑導航與頁面徽章 -->
-          <div class="flex items-center gap-2 text-xs sm:text-sm">
-            <span class="text-gray-400 hidden sm:inline-flex items-center gap-1 font-medium">
+          <!-- 動態麵包屑導航與頁面徽章 (針對手機端進行寬度適應與截斷) -->
+          <div class="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
+            <span class="text-gray-400 hidden sm:inline-flex items-center gap-1 font-medium shrink-0">
               <Icon name="mdi:spa" class="text-[#154337]" />
               Hervive 後台
             </span>
-            <Icon name="mdi:chevron-right" class="text-gray-300 hidden sm:inline" />
-            <span class="inline-flex items-center gap-1.5 font-bold text-[#154337] bg-[#154337]/5 px-3 py-1 rounded-full border border-[#154337]/10">
-              <Icon name="mdi:circle" class="text-[8px] text-emerald-500" />
-              {{ currentPageTitle }}
+            <Icon name="mdi:chevron-right" class="text-gray-300 hidden sm:inline shrink-0" />
+            <span class="inline-flex items-center gap-1.5 font-bold text-[#154337] bg-[#154337]/5 px-2.5 sm:px-3 py-1 rounded-full border border-[#154337]/10 truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none">
+              <Icon name="mdi:circle" class="text-[8px] text-emerald-500 shrink-0" />
+              <span class="truncate">{{ currentPageTitle }}</span>
             </span>
           </div>
         </div>
         
-        <div class="flex items-center gap-3 sm:gap-4">
-          <!-- 全域搜尋列 (含 ⌘K 快捷鍵視覺標籤) -->
-          <div class="relative flex items-center hidden md:flex">
+        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+          <!-- 全域搜尋列 (電腦版) -->
+          <div class="relative flex items-center hidden lg:flex">
             <Icon name="mdi:magnify" class="absolute left-3.5 text-gray-400 text-base" />
             <input 
               type="text" 
               placeholder="搜尋預約、會員或產品..." 
-              class="bg-[#FAF4EE]/70 border border-[#154337]/10 py-1.5 pr-12 pl-10 rounded-full text-gray-800 outline-none transition-all duration-200 focus:border-[#154337] focus:ring-2 focus:ring-[#154337]/10 focus:bg-white text-xs sm:text-sm w-[220px] lg:w-[280px]" 
+              class="bg-[#FAF4EE]/70 border border-[#154337]/10 py-1.5 pr-12 pl-10 rounded-full text-gray-800 outline-none transition-all duration-200 focus:border-[#154337] focus:ring-2 focus:ring-[#154337]/10 focus:bg-white text-xs sm:text-sm w-[200px] xl:w-[260px]" 
             />
             <div class="absolute right-3 px-1.5 py-0.5 text-[10px] font-mono bg-white text-gray-400 rounded-md border border-gray-200 pointer-events-none shadow-2xs">
               ⌘K
             </div>
           </div>
 
-          <!-- 🌟 通知中心按鈕與下拉浮動面板 (z-50 頂層高權重) -->
+          <!-- 🌟 通知中心按鈕與全視窗/手機端適應 Dropdown & Sheet Drawer -->
           <div class="relative">
             <!-- 點擊遮罩 (點擊外部自動關閉通知視窗) -->
             <div 
               v-if="showNotificationsPanel" 
-              class="fixed inset-0 z-40 bg-transparent" 
+              class="fixed inset-0 z-50 bg-black/40 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none transition-opacity" 
               @click="showNotificationsPanel = false"
             ></div>
 
+            <!-- 鈴鐺觸發按鈕 -->
             <button 
-              class="relative p-2.5 rounded-full text-gray-500 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95 z-50"
+              class="relative p-2 sm:p-2.5 rounded-full text-gray-600 hover:text-[#154337] hover:bg-[#FAF4EE] transition cursor-pointer active:scale-95 z-50"
               title="通知中心"
               @click="showNotificationsPanel = !showNotificationsPanel"
             >
               <Icon name="mdi:bell-outline" class="text-xl" />
               <span 
                 v-if="unreadCount > 0" 
-                class="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse font-mono"
+                class="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse font-mono"
               >
                 {{ unreadCount }}
               </span>
             </button>
 
-            <!-- 浮動通知面板 Drawer Panel -->
+            <!-- 🌟 浮動通知面板 / 手機端智慧抗溢出 Drawer Panel -->
             <div 
               v-if="showNotificationsPanel" 
-              class="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-[#154337]/15 z-50 overflow-hidden"
+              class="fixed inset-x-2 top-[68px] sm:top-full sm:bottom-auto sm:absolute sm:right-0 sm:left-auto sm:inset-x-auto sm:mt-3 w-auto sm:w-96 bg-white rounded-3xl shadow-2xl border border-[#154337]/15 z-[60] overflow-hidden animate-fade-in max-h-[82vh] sm:max-h-[500px] flex flex-col"
             >
               <!-- Panel Header -->
-              <div class="p-4 bg-[#FAF4EE] border-b border-[#154337]/10 flex items-center justify-between">
+              <div class="p-3.5 sm:p-4 bg-[#FAF4EE] border-b border-[#154337]/10 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
-                  <Icon name="mdi:bell-ring" class="text-[#154337]" />
-                  <h3 class="font-bold text-[#154337] text-sm">通知中心</h3>
-                  <span v-if="unreadCount > 0" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                  <Icon name="mdi:bell-ring" class="text-[#154337] text-base sm:text-lg" />
+                  <h3 class="font-bold text-[#154337] text-xs sm:text-sm">通知中心</h3>
+                  <span v-if="unreadCount > 0" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 font-mono">
                     {{ unreadCount }} 未讀
                   </span>
                 </div>
@@ -226,34 +228,37 @@
                   <button @click="markAllAsRead" class="text-gray-600 hover:text-[#154337] transition cursor-pointer font-bold">全部已讀</button>
                   <span class="text-gray-300">|</span>
                   <button @click="clearAllNotifications" class="text-gray-400 hover:text-rose-600 transition cursor-pointer font-bold">清空</button>
+                  <button @click="showNotificationsPanel = false" class="sm:hidden ml-1 p-1 text-gray-400 hover:text-gray-700 cursor-pointer">
+                    <Icon name="mdi:close" size="18" />
+                  </button>
                 </div>
               </div>
 
               <!-- Filter Tabs -->
-              <div class="flex border-b border-gray-100 px-3 bg-white text-xs">
+              <div class="flex border-b border-gray-100 px-2 sm:px-3 bg-white text-xs shrink-0 overflow-x-auto">
                 <button 
                   @click="activeNotificationTab = 'all'"
-                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'all' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer whitespace-nowrap', activeNotificationTab === 'all' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
                 >
                   全部 ({{ notifications.length }})
                 </button>
                 <button 
                   @click="activeNotificationTab = 'appointment'"
-                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'appointment' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer whitespace-nowrap', activeNotificationTab === 'appointment' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
                 >
                   預約通知
                 </button>
                 <button 
                   @click="activeNotificationTab = 'financial'"
-                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer', activeNotificationTab === 'financial' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+                  :class="['py-2.5 px-3 font-bold border-b-2 transition cursor-pointer whitespace-nowrap', activeNotificationTab === 'financial' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
                 >
                   財務週月報
                 </button>
               </div>
 
               <!-- Notification Item List -->
-              <div class="max-h-80 overflow-y-auto divide-y divide-gray-100 p-1.5 custom-scrollbar">
-                <div v-if="filteredNotifications.length === 0" class="py-8 text-center text-gray-400 text-xs">
+              <div class="flex-1 overflow-y-auto divide-y divide-gray-100 p-2 custom-scrollbar">
+                <div v-if="filteredNotifications.length === 0" class="py-10 text-center text-gray-400 text-xs">
                   尚無任何通知推播訊息
                 </div>
                 <div 
@@ -261,8 +266,8 @@
                   :key="item.id"
                   @click="markAsRead(item)"
                   :class="[
-                    'p-3 hover:bg-[#FAF4EE]/70 transition cursor-pointer flex gap-3 items-start relative rounded-2xl my-1 border border-transparent hover:border-[#154337]/10',
-                    !item.read ? 'bg-emerald-50/40 font-medium' : 'opacity-75 bg-white'
+                    'p-3 hover:bg-[#FAF4EE]/70 transition cursor-pointer flex gap-2.5 items-start relative rounded-2xl my-1 border border-transparent hover:border-[#154337]/10 active:scale-[0.99]',
+                    !item.read ? 'bg-emerald-50/50 font-medium' : 'opacity-75 bg-white'
                   ]"
                 >
                   <div :class="['w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs', item.iconBg]">
@@ -275,8 +280,14 @@
                         {{ item.badgeText }}
                       </span>
                     </div>
-                    <p class="text-xs text-gray-600 leading-snug line-clamp-2">{{ item.message }}</p>
-                    <span class="text-[10px] text-gray-400 font-mono mt-1 block">{{ item.time }}</span>
+                    <p class="text-xs text-gray-600 leading-relaxed line-clamp-2">{{ item.message }}</p>
+                    <div class="flex items-center justify-between mt-1 pt-1 border-t border-gray-100/60">
+                      <span class="text-[10px] text-gray-400 font-mono block">{{ item.time }}</span>
+                      <span class="text-[10px] text-[#154337] font-bold flex items-center gap-0.5">
+                        <span>查看</span>
+                        <Icon name="mdi:chevron-right" size="12" />
+                      </span>
+                    </div>
                   </div>
                   <span v-if="!item.read" class="w-2 h-2 rounded-full bg-rose-500 absolute top-3 right-3 shadow-xs"></span>
                 </div>
@@ -285,17 +296,17 @@
           </div>
 
           <!-- 管理員 Avatar & 登出按鈕 -->
-          <div class="flex items-center gap-2 py-1 pr-2.5 pl-1.5 bg-[#FAF4EE] border border-[#154337]/10 rounded-full transition group">
+          <div class="flex items-center gap-1.5 sm:gap-2 py-1 pr-2 sm:pr-2.5 pl-1 bg-[#FAF4EE] border border-[#154337]/10 rounded-full transition group">
             <div class="w-7 h-7 bg-[#154337] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs uppercase">
               {{ (adminUser?.username || 'A').slice(0, 1) }}
             </div>
             <div class="hidden sm:flex flex-col text-left">
-              <span class="text-xs font-semibold text-gray-800 leading-tight">{{ adminUser?.username || '系統管理員' }}</span>
+              <span class="text-xs font-semibold text-gray-800 leading-tight truncate max-w-[90px]">{{ adminUser?.username || '系統管理員' }}</span>
               <span class="text-[10px] text-emerald-700 font-mono uppercase">{{ adminUser?.role || 'Store Admin' }}</span>
             </div>
             <button 
               @click="logout" 
-              class="ml-1 p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition cursor-pointer"
+              class="ml-0.5 p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition cursor-pointer active:scale-95"
               title="登出系統"
             >
               <Icon name="mdi:logout" size="16" />
@@ -305,7 +316,7 @@
       </header>
 
       <!-- 主要內容區 (渲染各頁面內容) -->
-      <main class="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+      <main class="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8">
         <slot />
       </main>
     </div>
@@ -326,7 +337,7 @@ const isCollapsed = ref(false)
 
 const { adminUser, logout } = useAuth()
 
-// 🌟 通知中心狀態與型別宣告
+// 通知中心狀態與型別宣告
 const showNotificationsPanel = ref(false)
 const activeNotificationTab = ref<'all' | 'appointment' | 'financial'>('all')
 
@@ -376,7 +387,7 @@ const getTaiwanDateTimeDetails = (dateObj: Date = new Date()) => {
   
   const dateStr = `${year}-${month}-${day}`;
   const taiwanDate = new Date(`${dateStr}T00:00:00+08:00`);
-  const dayOfWeek = taiwanDate.getDay(); // 0 = 禮拜日
+  const dayOfWeek = taiwanDate.getDay();
 
   const lastDayNum = new Date(Number(year), Number(month), 0).getDate();
   const isLastDayOfMonth = (parseInt(day, 10) === lastDayNum);
@@ -388,7 +399,7 @@ const getTaiwanDateString = (dateObj: Date = new Date()) => {
   return getTaiwanDateTimeDetails(dateObj).dateStr
 }
 
-// 🌟 自動獲取與生成【新確認預約】與【每週 / 每月財報 (禮拜日與月底 22:00)】推播訊息
+// 自動獲取與生成推播訊息
 const fetchNotifications = async () => {
   try {
     const list: NotificationItem[] = []
