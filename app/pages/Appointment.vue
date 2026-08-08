@@ -355,6 +355,70 @@ const saveUserNotes = async (appt: any) => {
 }
 
 // ==========================================
+// 8.5 變更預約時間模組 (Edit Appointment Time)
+// ==========================================
+const showEditTimeModal = ref(false)
+const selectedApptForEditTime = ref<any>(null)
+const editTimeDateObj = ref<Date | null>(null)
+const editTimeStartStr = ref<string>('12:00')
+const editTimeSaving = ref(false)
+
+const timeOptions = [
+  '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+  '19:00', '19:30', '20:00'
+]
+
+const openEditTimeModal = (appt: any) => {
+  selectedApptForEditTime.value = appt
+  if (appt.date) {
+    const [y, m, d] = appt.date.split('-').map(Number)
+    editTimeDateObj.value = new Date(y, m - 1, d)
+  } else {
+    editTimeDateObj.value = new Date()
+  }
+  editTimeStartStr.value = appt.start_time || '12:00'
+  showEditTimeModal.value = true
+}
+
+const submitEditTime = async () => {
+  if (!selectedApptForEditTime.value || !editTimeDateObj.value) return
+  const formattedDate = formatDateToString(editTimeDateObj.value)
+  if (!formattedDate) {
+    alert('請選擇有效的預約日期')
+    return
+  }
+
+  editTimeSaving.value = true
+  try {
+    const res = await fetch(`${backendUrl}/api/appointments`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: selectedApptForEditTime.value.id,
+        date: formattedDate,
+        start_time: editTimeStartStr.value
+      })
+    })
+
+    const resData = await res.json()
+    if (!res.ok) {
+      throw new Error(resData.error || '調整時間失敗')
+    }
+
+    alert('✅ 預約時間已成功變更，連動資料與日曆已同步更新！')
+    showEditTimeModal.value = false
+    selectedApptForEditTime.value = null
+    refreshAllData()
+  } catch (err: any) {
+    alert(err.message || '操作失敗')
+  } finally {
+    editTimeSaving.value = false
+  }
+}
+
+// ==========================================
 // 9. 點收與課程扣堂模組 (Complete & Course Deduction)
 // ==========================================
 const showCompleteModal = ref(false)
@@ -623,6 +687,9 @@ const submitCompleteAppointment = async () => {
                 </button>
 
                 <div class="flex gap-2 w-full mt-1">
+                  <button @click="openEditTimeModal(appt)" class="px-2.5 py-2 text-xs bg-amber-50 text-amber-900 border border-amber-200 rounded-xl font-bold active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer">
+                    <Icon name="mdi:clock-edit-outline" size="15" /> 改時間
+                  </button>
                   <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="flex-1 py-2 text-xs bg-emerald-700 text-white rounded-xl font-bold active:scale-95 transition">核准</button>
                   <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="flex-1 py-2 text-xs bg-blue-700 text-white rounded-xl font-bold active:scale-95 transition">點收完成</button>
                   <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="flex-1 py-2 text-xs bg-amber-600 text-white rounded-xl font-bold active:scale-95 transition">取消完成</button>
@@ -688,6 +755,10 @@ const submitCompleteAppointment = async () => {
                     </button>
                   </td>
                   <td class="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                    <button @click="openEditTimeModal(appt)" class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold hover:bg-amber-100 transition cursor-pointer active:scale-95 inline-flex items-center gap-1">
+                      <Icon name="mdi:clock-edit-outline" size="14" />
+                      改時間
+                    </button>
                     <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-emerald-800 transition cursor-pointer active:scale-95">核准</button>
                     <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="text-xs bg-blue-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-blue-800 transition cursor-pointer active:scale-95">點收完成</button>
                     <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition cursor-pointer active:scale-95">未完成</button>
@@ -879,6 +950,54 @@ const submitCompleteAppointment = async () => {
         <div class="flex justify-end gap-2 mt-4">
           <button @click="showNoteModal = false" class="px-4 py-2 text-xs font-bold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition cursor-pointer">取消</button>
           <button @click="saveNote" class="px-4 py-2 text-xs font-bold bg-[#154337] text-white rounded-xl hover:bg-[#11352a] active:scale-95 transition shadow-xs cursor-pointer">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 變更預約時間 Modal -->
+    <div v-if="showEditTimeModal && selectedApptForEditTime" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative border border-white/20">
+        <button @click="showEditTimeModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
+          <Icon name="mdi:close" size="20" />
+        </button>
+
+        <h3 class="text-lg font-bold text-[#154337] mb-1 flex items-center gap-2 font-serif">
+          <Icon name="mdi:clock-edit-outline" class="text-emerald-700" size="22" /> 調整預約時間
+        </h3>
+        <p class="text-xs text-gray-500 mb-4 font-mono">
+          客戶：<span class="font-bold text-gray-900">{{ selectedApptForEditTime.client_name }}</span> | 
+          單號：<span class="font-bold text-[#154337]">{{ selectedApptForEditTime.appointment_code || '-' }}</span>
+        </p>
+
+        <div class="space-y-4 my-4">
+          <!-- 選擇新日期 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">選擇新的預約日期</label>
+            <ClientOnly>
+              <MyCalendar v-model="editTimeDateObj" placeholder="選擇日期" class="w-full" />
+            </ClientOnly>
+          </div>
+
+          <!-- 選擇新時段 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">選擇新的開始時段</label>
+            <select v-model="editTimeStartStr" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[42px] outline-none font-mono">
+              <option v-for="t in timeOptions" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </div>
+
+          <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 flex items-start gap-2">
+            <Icon name="mdi:information-outline" class="shrink-0 mt-0.5" size="16" />
+            <span>變更時間將自動校驗店家公休與行程衝突，並同步更動營收帳目與 Google 日曆行程。</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button @click="showEditTimeModal = false" class="flex-1 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer">取消</button>
+          <button @click="submitEditTime" :disabled="editTimeSaving" class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-xs">
+            <Icon v-if="editTimeSaving" name="mdi:loading" class="animate-spin" size="16" />
+            <span>{{ editTimeSaving ? '更新中...' : '確認變更時間' }}</span>
+          </button>
         </div>
       </div>
     </div>

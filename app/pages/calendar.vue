@@ -39,6 +39,75 @@ const getTaiwanDateString = (dateObj: Date = new Date()) => {
   return `${year}-${month}-${day}`;
 }
 
+const formatDateToString = (d: Date | null) => {
+  if (!d) return ''
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const showEditTimeModal = ref(false)
+const selectedApptForEditTime = ref<any>(null)
+const editTimeDateObj = ref<Date | null>(null)
+const editTimeStartStr = ref<string>('12:00')
+const editTimeSaving = ref(false)
+
+const timeOptions = [
+  '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+  '19:00', '19:30', '20:00'
+]
+
+const openEditTimeModal = (appt: any) => {
+  selectedApptForEditTime.value = appt
+  if (appt.date) {
+    const [y, m, d] = appt.date.split('-').map(Number)
+    editTimeDateObj.value = new Date(y, m - 1, d)
+  } else {
+    editTimeDateObj.value = new Date()
+  }
+  editTimeStartStr.value = appt.start_time || '12:00'
+  showEditTimeModal.value = true
+}
+
+const submitEditTime = async () => {
+  if (!selectedApptForEditTime.value || !editTimeDateObj.value) return
+  const formattedDate = formatDateToString(editTimeDateObj.value)
+  if (!formattedDate) {
+    alert('請選擇有效的預約日期')
+    return
+  }
+
+  editTimeSaving.value = true
+  try {
+    const res = await fetch(`${backendUrl}/api/appointments`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: selectedApptForEditTime.value.id,
+        date: formattedDate,
+        start_time: editTimeStartStr.value
+      })
+    })
+
+    const resData = await res.json()
+    if (!res.ok) {
+      throw new Error(resData.error || '調整時間失敗')
+    }
+
+    alert('✅ 預約時間已成功變更，連動資料與日曆已同步更新！')
+    showEditTimeModal.value = false
+    selectedApptForEditTime.value = null
+    refreshAllData()
+  } catch (err: any) {
+    alert(err.message || '操作失敗')
+  } finally {
+    editTimeSaving.value = false
+  }
+}
+
 const getDayTimeOffDisplayText = (dayTimeOffs: any[]) => {
   if (!dayTimeOffs || dayTimeOffs.length === 0) return '';
   const firstWithReason = dayTimeOffs.find(t => t.reason && String(t.reason).trim() !== '');
@@ -665,13 +734,18 @@ const saveUserNotes = async (appt: any) => {
               class="bg-white p-4 rounded-2xl shadow-xs border border-gray-200/80 border-l-4 transition hover:shadow-md"
               :class="appt.status === 'complete' ? 'border-l-blue-600' : appt.status === 'cancelled' ? 'border-l-rose-500 opacity-60' : 'border-l-[#154337]'"
             >
-              <div class="flex justify-between items-start mb-2">
+              <div class="flex justify-between items-center mb-2">
                 <span class="font-black text-base md:text-lg text-gray-900 font-mono">
                   {{ appt.start_time }} - {{ appt.end_time }}
                 </span>
-                <span :class="['text-[11px] font-bold px-2.5 py-0.5 rounded-full border', appt.status === 'complete' ? 'bg-blue-50 text-blue-700 border-blue-200' : appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200']">
-                  {{ appt.status === 'complete' ? '已完成' : appt.status === 'confirmed' ? '已確認' : appt.status === 'cancelled' ? '已取消' : '審核中' }}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  <button @click="openEditTimeModal(appt)" class="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full font-bold hover:bg-amber-100 transition cursor-pointer flex items-center gap-1">
+                    <Icon name="mdi:clock-edit-outline" size="13" /> 改時間
+                  </button>
+                  <span :class="['text-[11px] font-bold px-2.5 py-0.5 rounded-full border', appt.status === 'complete' ? 'bg-blue-50 text-blue-700 border-blue-200' : appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200']">
+                    {{ appt.status === 'complete' ? '已完成' : appt.status === 'confirmed' ? '已確認' : appt.status === 'cancelled' ? '已取消' : '審核中' }}
+                  </span>
+                </div>
               </div>
 
               <!-- 美容師指派下拉框 -->
@@ -849,6 +923,54 @@ const saveUserNotes = async (appt: any) => {
         <div class="flex justify-end gap-2 mt-4">
           <button @click="showNoteModal = false" class="px-4 py-2 text-xs font-bold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition cursor-pointer">取消</button>
           <button @click="saveNote" class="px-4 py-2 text-xs font-bold bg-[#154337] text-white rounded-xl hover:bg-[#11352a] active:scale-95 transition shadow-xs cursor-pointer">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 變更預約時間 Modal -->
+    <div v-if="showEditTimeModal && selectedApptForEditTime" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative border border-white/20">
+        <button @click="showEditTimeModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
+          <Icon name="mdi:close" size="20" />
+        </button>
+
+        <h3 class="text-lg font-bold text-[#154337] mb-1 flex items-center gap-2 font-serif">
+          <Icon name="mdi:clock-edit-outline" class="text-emerald-700" size="22" /> 調整預約時間
+        </h3>
+        <p class="text-xs text-gray-500 mb-4 font-mono">
+          客戶：<span class="font-bold text-gray-900">{{ selectedApptForEditTime.client_name }}</span> | 
+          單號：<span class="font-bold text-[#154337]">{{ selectedApptForEditTime.appointment_code || '-' }}</span>
+        </p>
+
+        <div class="space-y-4 my-4">
+          <!-- 選擇新日期 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">選擇新的預約日期</label>
+            <ClientOnly>
+              <MyCalendar v-model="editTimeDateObj" placeholder="選擇日期" class="w-full" />
+            </ClientOnly>
+          </div>
+
+          <!-- 選擇新時段 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">選擇新的開始時段</label>
+            <select v-model="editTimeStartStr" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[42px] outline-none font-mono">
+              <option v-for="t in timeOptions" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </div>
+
+          <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 flex items-start gap-2">
+            <Icon name="mdi:information-outline" class="shrink-0 mt-0.5" size="16" />
+            <span>變更時間將自動校驗店家公休與行程衝突，並同步更動營收帳目與 Google 日曆行程。</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button @click="showEditTimeModal = false" class="flex-1 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer">取消</button>
+          <button @click="submitEditTime" :disabled="editTimeSaving" class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-xs">
+            <Icon v-if="editTimeSaving" name="mdi:loading" class="animate-spin" size="16" />
+            <span>{{ editTimeSaving ? '更新中...' : '確認變更時間' }}</span>
+          </button>
         </div>
       </div>
     </div>
