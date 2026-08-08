@@ -732,7 +732,7 @@ const saveUserNotes = async (appt: any) => {
                   {{ appt.start_time }} - {{ appt.end_time }}
                 </span>
                 <div class="flex items-center gap-1.5">
-                  <button @click="openEditTimeModal(appt)" class="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full font-bold hover:bg-amber-100 transition cursor-pointer flex items-center gap-1">
+                  <button v-if="!appt.status || appt.status === 'pending' || appt.status === 'confirmed'" @click="openEditTimeModal(appt)" class="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full font-bold hover:bg-amber-100 transition cursor-pointer flex items-center gap-1">
                     <Icon name="mdi:clock-edit-outline" size="13" /> 改時間
                   </button>
                   <span :class="['text-[11px] font-bold px-2.5 py-0.5 rounded-full border', appt.status === 'complete' ? 'bg-blue-50 text-blue-700 border-blue-200' : appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : appt.status === 'cancelled' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-800 border-amber-200']">

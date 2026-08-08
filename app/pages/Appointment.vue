@@ -687,7 +687,7 @@ const submitCompleteAppointment = async () => {
                 </button>
 
                 <div class="flex gap-2 w-full mt-1">
-                  <button @click="openEditTimeModal(appt)" class="px-2.5 py-2 text-xs bg-amber-50 text-amber-900 border border-amber-200 rounded-xl font-bold active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer">
+                  <button v-if="!appt.status || appt.status === 'pending' || appt.status === 'confirmed'" @click="openEditTimeModal(appt)" class="px-2.5 py-2 text-xs bg-amber-50 text-amber-900 border border-amber-200 rounded-xl font-bold active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer">
                     <Icon name="mdi:clock-edit-outline" size="15" /> 改時間
                   </button>
                   <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="flex-1 py-2 text-xs bg-emerald-700 text-white rounded-xl font-bold active:scale-95 transition">核准</button>
@@ -755,7 +755,7 @@ const submitCompleteAppointment = async () => {
                     </button>
                   </td>
                   <td class="p-3.5 text-right space-x-1.5 whitespace-nowrap">
-                    <button @click="openEditTimeModal(appt)" class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold hover:bg-amber-100 transition cursor-pointer active:scale-95 inline-flex items-center gap-1">
+                    <button v-if="!appt.status || appt.status === 'pending' || appt.status === 'confirmed'" @click="openEditTimeModal(appt)" class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold hover:bg-amber-100 transition cursor-pointer active:scale-95 inline-flex items-center gap-1">
                       <Icon name="mdi:clock-edit-outline" size="14" />
                       改時間
                     </button>
