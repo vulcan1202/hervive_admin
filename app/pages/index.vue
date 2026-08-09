@@ -127,8 +127,11 @@ onMounted(async () => {
       ).length
 
       todayAppointmentsCount.value = appts.filter((a: any) => {
-        const createdDate = a.created_at ? a.created_at.split('T')[0].split(' ')[0] : ''
-        return createdDate === todayStr || a.date === todayStr
+        if (a.status === 'cancelled' || a.status === 'cancel') return false
+        if (!a.created_at) return false
+        const rawDateStr = a.created_at.includes('T') ? a.created_at : a.created_at.replace(' ', 'T')
+        const createdDate = getTaiwanDateString(new Date(rawDateStr))
+        return createdDate === todayStr
       }).length
     }
 

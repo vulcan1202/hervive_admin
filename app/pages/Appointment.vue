@@ -754,15 +754,17 @@ const submitCompleteAppointment = async () => {
                       查看備註
                     </button>
                   </td>
-                  <td class="p-3.5 text-right space-x-1.5 whitespace-nowrap">
-                    <button v-if="!appt.status || appt.status === 'pending' || appt.status === 'confirmed'" @click="openEditTimeModal(appt)" class="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold hover:bg-amber-100 transition cursor-pointer active:scale-95 inline-flex items-center gap-1">
-                      <Icon name="mdi:clock-edit-outline" size="14" />
-                      改時間
-                    </button>
-                    <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-emerald-800 transition cursor-pointer active:scale-95">核准</button>
-                    <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="text-xs bg-blue-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-blue-800 transition cursor-pointer active:scale-95">點收完成</button>
-                    <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition cursor-pointer active:scale-95">未完成</button>
-                    <button v-if="appt.status !== 'cancelled' && appt.status !== 'complete'" @click="updateAppointmentStatus(appt.id, 'cancelled')" class="text-xs bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl font-bold hover:bg-rose-100 transition cursor-pointer active:scale-95">取消</button>
+                  <td class="p-3.5 text-right whitespace-nowrap">
+                    <div class="inline-flex items-center justify-end gap-1.5">
+                      <button v-if="!appt.status || appt.status === 'pending' || appt.status === 'confirmed'" @click="openEditTimeModal(appt)" class="text-xs bg-amber-50 text-amber-900 border border-amber-200 h-8 px-2.5 rounded-xl font-bold hover:bg-amber-100 transition cursor-pointer active:scale-95 inline-flex items-center justify-center gap-1">
+                        <Icon name="mdi:clock-edit-outline" size="14" />
+                        改時間
+                      </button>
+                      <button v-if="!appt.status || appt.status === 'pending'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-emerald-700 text-white h-8 px-3 rounded-xl font-bold hover:bg-emerald-800 transition cursor-pointer active:scale-95 inline-flex items-center justify-center">核准</button>
+                      <button v-if="appt.status === 'confirmed'" @click="openCompleteModal(appt)" class="text-xs bg-blue-700 text-white h-8 px-3 rounded-xl font-bold hover:bg-blue-800 transition cursor-pointer active:scale-95 inline-flex items-center justify-center">點收完成</button>
+                      <button v-if="appt.status === 'complete'" @click="updateAppointmentStatus(appt.id, 'confirmed')" class="text-xs bg-amber-600 text-white h-8 px-3 rounded-xl font-bold hover:bg-amber-700 transition cursor-pointer active:scale-95 inline-flex items-center justify-center">未完成</button>
+                      <button v-if="appt.status !== 'cancelled' && appt.status !== 'complete'" @click="updateAppointmentStatus(appt.id, 'cancelled')" class="text-xs bg-rose-50 text-rose-700 border border-rose-200 h-8 px-3 rounded-xl font-bold hover:bg-rose-100 transition cursor-pointer active:scale-95 inline-flex items-center justify-center">取消</button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
