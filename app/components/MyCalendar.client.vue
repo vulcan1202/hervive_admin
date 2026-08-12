@@ -6,6 +6,7 @@ import { zhTW } from 'date-fns/locale'
 
 const props = defineProps<{
   minDate?: Date | string | null
+  maxDate?: Date | string | null
   disabledDates?: (Date | string)[]
   disabledWeekDays?: (number | string)[]
   placeholder?: string
@@ -37,6 +38,16 @@ const computedMinDate = computed<Date | undefined>(() => {
     return isNaN(props.minDate.getTime()) ? undefined : props.minDate
   }
   const d = new Date(props.minDate)
+  return isNaN(d.getTime()) ? undefined : d
+})
+
+// 解析 maxDate
+const computedMaxDate = computed<Date | undefined>(() => {
+  if (!props.maxDate) return undefined
+  if (props.maxDate instanceof Date) {
+    return isNaN(props.maxDate.getTime()) ? undefined : props.maxDate
+  }
+  const d = new Date(props.maxDate)
   return isNaN(d.getTime()) ? undefined : d
 })
 
@@ -87,6 +98,7 @@ const displayDate = computed(() => {
     v-bind="$attrs"
     :locale="zhTW"
     :min-date="computedMinDate"
+    :max-date="computedMaxDate"
     :disabled-dates="isDateDisabled"
     :enable-time-picker="false"
     :auto-apply="true"

@@ -369,46 +369,113 @@ const isWeeklyOff = (dayIndex: number) => {
 // ==========================================
 const holidayModeTab = ref<'weekly' | 'single_week' | 'monthly_range'>('weekly')
 
-// 單週公休 State
-const singleWeekStartDate = ref('')
-const singleWeekEndDate = ref('')
-const singleWeekReason = ref('單週門市休假')
-
-// 單月 / 連假區間公休 State
-const rangeStartDate = ref('')
-const rangeEndDate = ref('')
-const rangeReason = ref('單月/連假門市公休')
-
-// 快捷選擇目前顯示月份的第 N 週
-const setQuickSingleWeek = (weekNum: number) => {
+// 🌟 計算當月在月曆上的完整跨月週次 (自動涵蓋頭尾跨月天數，100% 無縫銜接前後月份)
+const calendarWeeksList = computed(() => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
   
-  let d = new Date(year, month, 1)
-  while (d.getDay() !== 1) {
-    d.setDate(d.getDate() + 1)
-  }
-  d.setDate(d.getDate() + (weekNum - 1) * 7)
-  const startDateStr = formatDateToString(d)
+  const firstDay = new Date(year, month, 1)
+  const dayOfWeek = firstDay.getDay() // 0 (Sun) ~ 6 (Sat)
   
-  const endD = new Date(d)
-  endD.setDate(endD.getDate() + 6)
-  const endDateStr = formatDateToString(endD)
+  // 計算第一週的星期一 (若 1 號是週日=0，往前推 6 天；若週一=1，往前推 0 天；若週二=2，往前推 1 天...)
+  const offsetToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  const startMonday = new Date(year, month, 1 - offsetToMonday)
+  
+  const lastDayOfMonth = new Date(year, month + 1, 0)
+  
+  const weeks = []
+  let currMonday = new Date(startMonday)
+  let weekIndex = 1
 
-  singleWeekStartDate.value = startDateStr
-  singleWeekEndDate.value = endDateStr
+  while (currMonday <= lastDayOfMonth || weekIndex <= 4) {
+    const currSunday = new Date(currMonday)
+    currSunday.setDate(currSunday.getDate() + 6)
+    
+    weeks.push({
+      weekIndex,
+      label: `第 ${weekIndex} 週`,
+      startDateStr: formatDateToString(currMonday),
+      endDateStr: formatDateToString(currSunday),
+      displayRange: `${formatDateToString(currMonday)} (一) ~ ${formatDateToString(currSunday)} (日)`
+    })
+    
+    currMonday = new Date(currMonday)
+    currMonday.setDate(currMonday.getDate() + 7)
+    weekIndex++
+    if (weekIndex > 6) break;
+  }
+  return weeks
+})
+
+// 單週公休：選擇第 N 週（僅顯示日期範圍，不開放編輯輸入）
+const selectedWeekIndex = ref<number>(1)
+
+const currentSelectedWeek = computed(() => {
+  if (calendarWeeksList.value.length === 0) return null
+  const found = calendarWeeksList.value.find(w => w.weekIndex === selectedWeekIndex.value)
+  return found || calendarWeeksList.value[0]
+})
+
+const applySelectedWeekOff = async () => {
+  if (!currentSelectedWeek.value) return
+  await batchCreateFullDayOff(
+    currentSelectedWeek.value.startDateStr, 
+    currentSelectedWeek.value.endDateStr, 
+    `${currentDate.value.getFullYear()}年${currentDate.value.getMonth() + 1}月 ${currentSelectedWeek.value.label}門市公休`
+  )
 }
 
-// 快捷選擇「全月」
+const clearSelectedWeekOff = async () => {
+  if (!currentSelectedWeek.value) return
+  await batchClearFullDayOff(
+    currentSelectedWeek.value.startDateStr, 
+    currentSelectedWeek.value.endDateStr
+  )
+}
+
+// 單月 / 連假區間公休：使用 MyCalendar 選擇起訖日期
+const rangeStartDateObj = ref<Date | string | null>(null)
+const rangeEndDateObj = ref<Date | string | null>(null)
+const rangeReason = ref('連假門市公休')
+
+// 快捷選擇「當月全月」
 const setQuickFullMonth = () => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
 
-  rangeStartDate.value = formatDateToString(firstDay)
-  rangeEndDate.value = formatDateToString(lastDay)
-  rangeReason.value = `${currentDate.value.getMonth() + 1} 月份全月店休`
+  rangeStartDateObj.value = firstDay
+  rangeEndDateObj.value = lastDay
+  rangeReason.value = `${currentDate.value.getFullYear()}年${month + 1}月份全月店休`
+}
+
+const applyCustomRangeOff = async () => {
+  const sObj = rangeStartDateObj.value instanceof Date ? rangeStartDateObj.value : (rangeStartDateObj.value ? new Date(rangeStartDateObj.value) : null)
+  const eObj = rangeEndDateObj.value instanceof Date ? rangeEndDateObj.value : (rangeEndDateObj.value ? new Date(rangeEndDateObj.value) : null)
+  
+  const startStr = formatDateToString(sObj)
+  const endStr = formatDateToString(eObj)
+
+  if (!startStr || !endStr) {
+    alert('請使用日曆選擇有效的開始與結束日期！')
+    return
+  }
+  await batchCreateFullDayOff(startStr, endStr, rangeReason.value)
+}
+
+const clearCustomRangeOff = async () => {
+  const sObj = rangeStartDateObj.value instanceof Date ? rangeStartDateObj.value : (rangeStartDateObj.value ? new Date(rangeStartDateObj.value) : null)
+  const eObj = rangeEndDateObj.value instanceof Date ? rangeEndDateObj.value : (rangeEndDateObj.value ? new Date(rangeEndDateObj.value) : null)
+
+  const startStr = formatDateToString(sObj)
+  const endStr = formatDateToString(eObj)
+
+  if (!startStr || !endStr) {
+    alert('請使用日曆選擇有效的開始與結束日期！')
+    return
+  }
+  await batchClearFullDayOff(startStr, endStr)
 }
 
 // 批量寫入全天公休 (全天 / 連假 / 單週 / 單月)
@@ -715,80 +782,94 @@ const saveUserNotes = async (appt: any) => {
             </div>
           </div>
 
-          <!-- Tab Content 2: 單週特例公休 -->
-          <div v-else-if="holidayModeTab === 'single_week'" class="space-y-3 animate-fade-in">
+          <!-- Tab Content 2: 單週特例公休 (自動涵蓋前後月份頭尾天數，僅展示日期不開放修改) -->
+          <div v-else-if="holidayModeTab === 'single_week'" class="space-y-4 animate-fade-in">
             <div class="flex flex-wrap items-center gap-2 text-xs">
-              <span class="font-bold text-[#154337]">快捷選擇 ({{ currentDate.getFullYear() }}年{{ currentDate.getMonth() + 1 }}月)：</span>
-              <button type="button" @click="setQuickSingleWeek(1)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 1 週</button>
-              <button type="button" @click="setQuickSingleWeek(2)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 2 週</button>
-              <button type="button" @click="setQuickSingleWeek(3)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 3 週</button>
-              <button type="button" @click="setQuickSingleWeek(4)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 4 週</button>
+              <span class="font-bold text-[#154337]">選擇週別 ({{ currentDate.getFullYear() }}年{{ currentDate.getMonth() + 1 }}月月曆)：</span>
+              <button 
+                v-for="w in calendarWeeksList" 
+                :key="w.weekIndex"
+                type="button" 
+                @click="selectedWeekIndex = w.weekIndex" 
+                :class="[
+                  'px-3 py-1.5 rounded-xl font-bold transition cursor-pointer border shadow-2xs', 
+                  selectedWeekIndex === w.weekIndex ? 'bg-[#154337] text-white border-[#154337]' : 'bg-amber-50/80 text-amber-900 border-amber-200/80 hover:bg-amber-100'
+                ]"
+              >
+                {{ w.label }}
+              </button>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end bg-[#FAF4EE]/50 p-3 rounded-2xl border border-[#154337]/10">
-              <div>
-                <label class="block text-[11px] font-bold text-gray-700 mb-1">單週開始日期</label>
-                <input type="date" v-model="singleWeekStartDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+            <!-- 單週時間展示卡片 (只顯示日期，禁止隨意修改以確保完整一週) -->
+            <div v-if="currentSelectedWeek" class="bg-[#FAF4EE]/70 p-4 rounded-2xl border border-[#154337]/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="text-xs font-bold text-[#154337] flex items-center gap-1.5">
+                  <Icon name="mdi:calendar-week-begin" class="text-emerald-600 text-base" />
+                  <span>{{ currentSelectedWeek.label }} 起訖時間：</span>
+                </div>
+                <div class="text-sm font-mono font-bold text-gray-800 bg-white px-3 py-1.5 rounded-xl border border-gray-200 inline-block shadow-2xs">
+                  📅 {{ currentSelectedWeek.displayRange }}
+                </div>
+                <p class="text-[11px] text-gray-500">此選區自動涵蓋跨月頭尾日期，確保全週時間無縫銜接。</p>
               </div>
-              <div>
-                <label class="block text-[11px] font-bold text-gray-700 mb-1">單週結束日期</label>
-                <input type="date" v-model="singleWeekEndDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
-              </div>
-              <div class="flex items-center gap-2">
+
+              <div class="flex items-center gap-2 w-full sm:w-auto">
                 <button 
                   type="button"
-                  @click="batchCreateFullDayOff(singleWeekStartDate, singleWeekEndDate, singleWeekReason)" 
-                  class="flex-1 py-2 px-3 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-2xs cursor-pointer"
+                  @click="applySelectedWeekOff" 
+                  class="flex-1 sm:flex-none py-2.5 px-4 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-xs cursor-pointer flex items-center justify-center gap-1 active:scale-95"
                 >
-                  套用單週公休
+                  <Icon name="mdi:check-circle-outline" class="text-sm" />
+                  <span>套用此週公休</span>
                 </button>
                 <button 
                   type="button"
-                  @click="batchClearFullDayOff(singleWeekStartDate, singleWeekEndDate)" 
-                  class="py-2 px-3 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer"
+                  @click="clearSelectedWeekOff" 
+                  class="py-2.5 px-4 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer flex items-center justify-center gap-1 active:scale-95"
                 >
-                  清除
+                  <Icon name="mdi:close-circle-outline" class="text-sm" />
+                  <span>取消此週公休</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Tab Content 3: 單月 / 連假區間公休 -->
-          <div v-else-if="holidayModeTab === 'monthly_range'" class="space-y-3 animate-fade-in">
+          <!-- Tab Content 3: 單月 / 連假區間公休 (套用 MyCalendar 日曆選擇器，可自由定製日期) -->
+          <div v-else-if="holidayModeTab === 'monthly_range'" class="space-y-4 animate-fade-in">
             <div class="flex items-center justify-between text-xs">
               <div class="text-gray-600">
-                <span class="font-bold text-[#154337]">單月/連假指定區間：</span>可用於設定整月門市休假、員工旅遊或端午/中秋/春節連休。
+                <span class="font-bold text-[#154337]">連假特休指定區間：</span>可自行使用日曆定製特定連假、全月店休或特定活動休假。
               </div>
-              <button type="button" @click="setQuickFullMonth" class="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg font-bold hover:bg-emerald-100 transition cursor-pointer">
+              <button type="button" @click="setQuickFullMonth" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold hover:bg-emerald-100 transition cursor-pointer shadow-2xs">
                 快捷選擇當月全月 ({{ currentDate.getMonth() + 1 }}月)
               </button>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end bg-[#FAF4EE]/50 p-3 rounded-2xl border border-[#154337]/10">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end bg-[#FAF4EE]/50 p-3.5 rounded-2xl border border-[#154337]/10">
               <div>
-                <label class="block text-[11px] font-bold text-gray-700 mb-1">開始日期</label>
-                <input type="date" v-model="rangeStartDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">開始日期 (MyCalendar)</label>
+                <MyCalendar v-model="rangeStartDateObj" placeholder="選擇連假開始日期" />
               </div>
               <div>
-                <label class="block text-[11px] font-bold text-gray-700 mb-1">結束日期</label>
-                <input type="date" v-model="rangeEndDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">結束日期 (MyCalendar)</label>
+                <MyCalendar v-model="rangeEndDateObj" placeholder="選擇連假結束日期" />
               </div>
               <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">公休說明/備註</label>
-                <input type="text" v-model="rangeReason" placeholder="例如：春節年假店休" class="w-full border border-gray-300 rounded-xl p-2 text-xs bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+                <input type="text" v-model="rangeReason" placeholder="例如：春節年假店休" class="w-full border border-gray-200 rounded-xl p-3 text-xs bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
               </div>
               <div class="flex items-center gap-2">
                 <button 
                   type="button"
-                  @click="batchCreateFullDayOff(rangeStartDate, rangeEndDate, rangeReason)" 
-                  class="flex-1 py-2 px-3 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-2xs cursor-pointer"
+                  @click="applyCustomRangeOff" 
+                  class="flex-1 py-3 px-3 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-xs cursor-pointer active:scale-95"
                 >
                   套用連假區間
                 </button>
                 <button 
                   type="button"
-                  @click="batchClearFullDayOff(rangeStartDate, rangeEndDate)" 
-                  class="py-2 px-3 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer"
+                  @click="clearCustomRangeOff" 
+                  class="py-3 px-3 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer active:scale-95"
                 >
                   清除
                 </button>
