@@ -85,13 +85,26 @@ const updateAppointmentBeautician = async (apptId: number, beauticianId: any) =>
 }
 
 const updateAppointmentStatus = async (id: number, newStatus: string) => {
-  let actionName = ''
-  if (newStatus === 'confirmed') actionName = '核准'
-  else if (newStatus === 'complete') actionName = '標記為已完成'
-  else if (newStatus === 'cancelled') actionName = '取消'
-  else if (newStatus === 'pending') actionName = '改為待審核'
+  const currentAppt = appointments.value.find(a => a.id === id)
+  let confirmMessage = ''
   
-  if (!confirm(`確定要將此預約${actionName}嗎？`)) return
+  if (newStatus === 'confirmed') {
+    if (currentAppt && currentAppt.status === 'complete') {
+      confirmMessage = '確定要取消點收完成（將預約狀態恢復為已確認）嗎？'
+    } else {
+      confirmMessage = '確定要將此預約核准嗎？'
+    }
+  } else if (newStatus === 'complete') {
+    confirmMessage = '確定要將此預約標記為已完成嗎？'
+  } else if (newStatus === 'cancelled') {
+    confirmMessage = '確定要將此預約取消嗎？'
+  } else if (newStatus === 'pending') {
+    confirmMessage = '確定要將此預約改為待審核嗎？'
+  } else {
+    confirmMessage = '確定要更新此預約狀態嗎？'
+  }
+  
+  if (!confirm(confirmMessage)) return
   
   try {
     const res = await fetch(`${backendUrl}/api/appointments`, {
