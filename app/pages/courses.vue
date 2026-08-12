@@ -19,7 +19,14 @@ const showRefundModal = ref(false)
 // 表單 State
 const courseForm = reactive({ id: null as number | null, name: '', description: '', price: 0, cost: 0 })
 const sellForm = reactive({ user_id: '', course_id: '', amount: 1, custom_total_price: undefined as number | undefined, payment_method: 'Cash' })
-const editPackageForm = reactive({ id: null as number | null, course_id: '', amount: 1, client_name: '', course_name: '' })
+const editPackageForm = reactive({ id: null as number | null, course_id: '', amount: 1, custom_total_price: undefined as number | undefined, client_name: '', course_name: '' })
+
+const updateEditPackageTotalPrice = () => {
+  const selectedCourse = coursesList.value.find(c => c.id === Number(editPackageForm.course_id))
+  if (selectedCourse && typeof selectedCourse.price === 'number') {
+    editPackageForm.custom_total_price = selectedCourse.price * (editPackageForm.amount || 1)
+  }
+}
 
 // 搜尋會員相關 State 與邏輯
 const userSearchText = ref('')
@@ -182,12 +189,30 @@ const handleSellPackage = async () => {
   }
 }
 
-const openEditPackageModal = (pkg: any) => {
+const openEditPackageModal = async (pkg: any) => {
   editPackageForm.id = pkg.id
   editPackageForm.course_id = pkg.course_id
   editPackageForm.amount = pkg.amount
   editPackageForm.client_name = pkg.client_name || '客戶'
   editPackageForm.course_name = pkg.course_name || '課程'
+
+  try {
+    const res = await fetch(`${backendUrl}/api/cash-transactions?user_id=${pkg.user_id}`)
+    if (res.ok) {
+      const data = await res.json()
+      const ct = (data.data || []).find((c: any) => c.category === '課程包套預收' && c.description.includes(pkg.course_name))
+      if (ct && typeof ct.amount === 'number') {
+        editPackageForm.custom_total_price = ct.amount
+      } else {
+        editPackageForm.custom_total_price = (pkg.course_price || 0) * pkg.amount
+      }
+    } else {
+      editPackageForm.custom_total_price = (pkg.course_price || 0) * pkg.amount
+    }
+  } catch {
+    editPackageForm.custom_total_price = (pkg.course_price || 0) * pkg.amount
+  }
+
   showEditPackageModal.value = true
 }
 
@@ -200,14 +225,15 @@ const saveEditPackage = async () => {
       body: JSON.stringify({
         id: editPackageForm.id,
         course_id: Number(editPackageForm.course_id),
-        amount: Number(editPackageForm.amount)
+        amount: Number(editPackageForm.amount),
+        custom_total_price: editPackageForm.custom_total_price !== undefined && editPackageForm.custom_total_price !== null ? Number(editPackageForm.custom_total_price) : undefined
       })
     })
     if (!res.ok) {
       const err = await res.json()
       throw new Error(err.error || '修改失敗')
     }
-    alert('✅ 會員包套內容修改成功！財務現金流已同步自動調整。')
+    alert('✅ 會員包套內容與成交價格修改成功！財務現金流已同步自動調整。')
     showEditPackageModal.value = false
     fetchData()
   } catch (err: any) {
@@ -684,15 +710,21 @@ onMounted(() => fetchData())
         <form @submit.prevent="saveEditPackage" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">更改課程方案 <span class="text-rose-500">*</span></label>
-            <select v-model="editPackageForm.course_id" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
+            <select v-model="editPackageForm.course_id" @change="updateEditPackageTotalPrice" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
               <option v-for="c in coursesList" :key="c.id" :value="c.id">{{ c.name }} (單價 ${{ c.price }})</option>
             </select>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">更改總堂數 <span class="text-rose-500">*</span></label>
-            <input type="number" v-model.number="editPackageForm.amount" required min="1" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
-            <p class="text-[11px] text-amber-700 mt-1">⚠️ 調整總堂數將自動連動計算剩餘堂數，並同步調整現金流與預收帳目差額。</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">更改總堂數 <span class="text-rose-500">*</span></label>
+              <input type="number" v-model.number="editPackageForm.amount" @input="updateEditPackageTotalPrice" required min="1" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">成交總金額/銷售價格 ($) <span class="text-rose-500">*</span></label>
+              <input type="number" v-model.number="editPackageForm.custom_total_price" required min="0" placeholder="可修改成交總價" class="w-full border border-amber-300 bg-amber-50/50 text-amber-900 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] outline-none font-mono font-bold" />
+            </div>
           </div>
+          <p class="text-[11px] text-amber-700">⚠️ 調整總堂數與成交總金額將自動連動計算剩餘堂數，並同步調整現金流與預收帳目金額。</p>
           <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
             <button type="button" @click="showEditPackageModal = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-200 transition">取消</button>
             <button type="submit" class="px-4 py-2 bg-[#154337] text-white rounded-xl text-xs font-bold hover:bg-[#0e2f27] transition shadow-md">確認修改</button>
