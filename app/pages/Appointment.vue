@@ -450,6 +450,29 @@ const onNewCourseChange = (newCourse: any) => {
   }
 }
 
+const availableProductsList = ref<any[]>([])
+const productsToSell = ref<Array<{ product_id: string | number, quantity: number, payment_method: string, custom_unit_price?: number }>>([])
+
+const addProductSale = () => {
+  productsToSell.value.push({
+    product_id: '',
+    quantity: 1,
+    payment_method: 'Cash',
+    custom_unit_price: undefined
+  })
+}
+
+const removeProductSale = (index: number) => {
+  productsToSell.value.splice(index, 1)
+}
+
+const onProductSaleChange = (item: any) => {
+  const p = availableProductsList.value.find(prod => prod.id === Number(item.product_id))
+  if (p && typeof p.selling_price === 'number') {
+    item.custom_unit_price = p.selling_price
+  }
+}
+
 const openCompleteModal = async (appt: any) => {
   selectedApptForComplete.value = appt
   showCompleteModal.value = true
@@ -457,11 +480,13 @@ const openCompleteModal = async (appt: any) => {
   
   for (const key in selectedCoursesToDeduct) delete selectedCoursesToDeduct[key]
   newCoursesToBuy.value = []
+  productsToSell.value = []
 
   try {
-    const [pkgRes, courseRes] = await Promise.all([
+    const [pkgRes, courseRes, prodRes] = await Promise.all([
       fetch(`${backendUrl}/api/users-courses?user_id=${appt.user_id}&has_remaining=true`),
-      fetch(`${backendUrl}/api/courses`)
+      fetch(`${backendUrl}/api/courses`),
+      fetch(`${backendUrl}/api/products`)
     ])
     
     if (pkgRes.ok) {
@@ -472,6 +497,11 @@ const openCompleteModal = async (appt: any) => {
     if (courseRes.ok) {
       const courseData = await courseRes.json()
       availableCoursesList.value = courseData.data || []
+    }
+
+    if (prodRes.ok) {
+      const prodData = await prodRes.json()
+      availableProductsList.value = prodData.data || []
     }
   } catch (err) {
     console.error("撈取點收資料失敗", err)
@@ -520,6 +550,15 @@ const submitCompleteAppointment = async () => {
       custom_total_price: c.custom_total_price !== undefined && c.custom_total_price !== null ? Number(c.custom_total_price) : undefined
     }))
 
+  const products_sold = productsToSell.value
+    .filter(p => p.product_id !== '')
+    .map(p => ({
+      product_id: Number(p.product_id),
+      quantity: Number(p.quantity),
+      payment_method: p.payment_method,
+      custom_unit_price: p.custom_unit_price !== undefined && p.custom_unit_price !== null ? Number(p.custom_unit_price) : undefined
+    }))
+
   try {
     const res = await fetch(`${backendUrl}/api/appointments/complete`, {
       method: 'POST',
@@ -528,6 +567,7 @@ const submitCompleteAppointment = async () => {
         appointment_id: selectedApptForComplete.value.id,
         courses_used,
         new_courses_bought,
+        products_sold,
         date: selectedApptForComplete.value.date
       })
     })
@@ -902,6 +942,56 @@ const submitCompleteAppointment = async () => {
                 <option value="Credit Card">信用卡</option>
                 <option value="Transfer">匯款</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 現場加購實體保養產品 (庫存產品銷售) -->
+        <div class="space-y-3 mt-6">
+          <div class="flex justify-between items-center border-b border-gray-100 pb-1">
+            <p class="text-xs font-bold text-gray-700">3. 現場加購實體保養產品 (庫存銷貨)</p>
+            <button type="button" @click="addProductSale" class="text-xs text-[#154337] font-bold hover:underline bg-[#FAF4EE] px-2.5 py-1 rounded-xl border border-[#154337]/15 cursor-pointer">
+              + 新增加購產品
+            </button>
+          </div>
+
+          <div v-if="productsToSell.length === 0" class="text-xs text-gray-400 italic py-2">
+            無加購保養產品。
+          </div>
+
+          <div v-for="(prod, index) in productsToSell" :key="index" class="bg-gray-50 p-3 rounded-2xl border border-gray-200 space-y-2 relative">
+            <button type="button" @click="removeProductSale(index)" class="absolute top-2.5 right-2.5 text-rose-500 hover:text-rose-700 bg-white rounded-full p-1 shadow-2xs cursor-pointer">
+              <Icon name="mdi:close" size="14" />
+            </button>
+            
+            <div>
+              <label class="block text-[11px] font-bold text-gray-600 mb-1">選擇庫存產品</label>
+              <select v-model="prod.product_id" @change="onProductSaleChange(prod)" class="w-full border border-gray-300 rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-[#154337] outline-none">
+                <option value="" disabled>請選擇產品...</option>
+                <option v-for="p in availableProductsList" :key="p.id" :value="p.id" :disabled="p.stock_quantity <= 0">
+                  {{ p.name }} (售價 ${{ p.selling_price }} | 庫存 {{ p.stock_quantity }} 件)
+                </option>
+              </select>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">銷售數量</label>
+                <input type="number" v-model.number="prod.quantity" min="1" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none font-mono" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">單價 ($)</label>
+                <input type="number" v-model.number="prod.custom_unit_price" min="0" placeholder="產品售價" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none font-mono bg-amber-50/50 text-amber-900 border-amber-200" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">付款方式</label>
+                <select v-model="prod.payment_method" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs bg-white focus:ring-2 focus:ring-[#154337] outline-none">
+                  <option value="Cash">現金 (Cash)</option>
+                  <option value="Line Pay">Line Pay</option>
+                  <option value="Credit Card">信用卡</option>
+                  <option value="Transfer">匯款</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
