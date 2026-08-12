@@ -18,8 +18,15 @@ const showRefundModal = ref(false)
 
 // 表單 State
 const courseForm = reactive({ id: null as number | null, name: '', description: '', price: 0, cost: 0 })
-const sellForm = reactive({ user_id: '', course_id: '', amount: 1, payment_method: 'Cash' })
+const sellForm = reactive({ user_id: '', course_id: '', amount: 1, custom_total_price: undefined as number | undefined, payment_method: 'Cash' })
 const editPackageForm = reactive({ id: null as number | null, course_id: '', amount: 1, client_name: '', course_name: '' })
+
+const updateSellTotalPrice = () => {
+  const selectedCourse = coursesList.value.find(c => c.id === Number(sellForm.course_id))
+  if (selectedCourse && typeof selectedCourse.price === 'number') {
+    sellForm.custom_total_price = selectedCourse.price * (sellForm.amount || 1)
+  }
+}
 
 // 退款表單 State
 const refundForm = reactive({
@@ -98,7 +105,10 @@ const handleSellPackage = async () => {
 
   try {
     const selectedCourse = coursesList.value.find(c => c.id === Number(sellForm.course_id))
-    const totalPrice = selectedCourse.price * sellForm.amount
+    const defaultTotalPrice = selectedCourse ? selectedCourse.price * sellForm.amount : 0
+    const totalPrice = (typeof sellForm.custom_total_price === 'number' && !isNaN(sellForm.custom_total_price) && sellForm.custom_total_price >= 0)
+      ? sellForm.custom_total_price
+      : defaultTotalPrice
 
     const resSell = await fetch(`${backendUrl}/api/users-courses`, {
       method: 'POST',
@@ -121,7 +131,7 @@ const handleSellPackage = async () => {
         amount: totalPrice,
         payment_method: sellForm.payment_method,
         user_id: Number(sellForm.user_id),
-        description: `購買「${selectedCourse.name}」共 ${sellForm.amount} 堂`,
+        description: `購買「${selectedCourse?.name || ''}」共 ${sellForm.amount} 堂 (${totalPrice !== defaultTotalPrice ? '優惠特價 $' + totalPrice : '定價 $' + defaultTotalPrice})`,
         date: new Date().toISOString().slice(0, 10)
       })
     })
@@ -541,7 +551,7 @@ onMounted(() => fetchData())
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">選擇購買課程 <span class="text-rose-500">*</span></label>
-            <select v-model="sellForm.course_id" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
+            <select v-model="sellForm.course_id" @change="updateSellTotalPrice" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
               <option value="" disabled>請選擇課程...</option>
               <option v-for="c in coursesList" :key="c.id" :value="c.id">{{ c.name }} (單價 ${{ c.price }})</option>
             </select>
@@ -549,17 +559,21 @@ onMounted(() => fetchData())
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-1">購買堂數 <span class="text-rose-500">*</span></label>
-              <input type="number" v-model.number="sellForm.amount" required min="1" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
+              <input type="number" v-model.number="sellForm.amount" @input="updateSellTotalPrice" required min="1" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono" />
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">收款方式 <span class="text-rose-500">*</span></label>
-              <select v-model="sellForm.payment_method" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
-                <option value="Cash">現金 (Cash)</option>
-                <option value="Line Pay">Line Pay</option>
-                <option value="Credit Card">信用卡</option>
-                <option value="Transfer">匯款</option>
-              </select>
+              <label class="block text-xs font-bold text-gray-700 mb-1">成交總金額 ($) <span class="text-rose-500">*</span></label>
+              <input type="number" v-model.number="sellForm.custom_total_price" required min="0" placeholder="可手動修改特價" class="w-full border border-amber-300 bg-amber-50/50 text-amber-900 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] outline-none font-mono font-bold" />
             </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">收款方式 <span class="text-rose-500">*</span></label>
+            <select v-model="sellForm.payment_method" class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
+              <option value="Cash">現金 (Cash)</option>
+              <option value="Line Pay">Line Pay</option>
+              <option value="Credit Card">信用卡</option>
+              <option value="Transfer">匯款</option>
+            </select>
           </div>
           <div v-if="sellForm.course_id && sellForm.amount > 0" class="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 flex justify-between items-center">
             <span class="text-xs text-emerald-800 font-bold">預收總金額試算：</span>

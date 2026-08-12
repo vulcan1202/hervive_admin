@@ -441,7 +441,14 @@ const loadingPackages = ref(false)
 const availableCoursesList = ref<any[]>([])
 
 const selectedCoursesToDeduct = reactive<Record<number, number>>({})
-const newCoursesToBuy = ref<Array<{ course_id: string | number, buy_amount: number, use_count: number, payment_method: string }>>([])
+const newCoursesToBuy = ref<Array<{ course_id: string | number, buy_amount: number, use_count: number, payment_method: string, custom_total_price?: number }>>([])
+
+const onNewCourseChange = (newCourse: any) => {
+  const c = availableCoursesList.value.find(item => item.id === Number(newCourse.course_id))
+  if (c && typeof c.price === 'number') {
+    newCourse.custom_total_price = c.price * (newCourse.buy_amount || 1)
+  }
+}
 
 const openCompleteModal = async (appt: any) => {
   selectedApptForComplete.value = appt
@@ -486,7 +493,8 @@ const addNewCoursePurchase = () => {
     course_id: '',
     buy_amount: 1,
     use_count: 1,
-    payment_method: 'Cash'
+    payment_method: 'Cash',
+    custom_total_price: undefined
   })
 }
 
@@ -508,7 +516,8 @@ const submitCompleteAppointment = async () => {
       course_id: Number(c.course_id),
       buy_amount: Number(c.buy_amount),
       use_count: Number(c.use_count),
-      payment_method: c.payment_method
+      payment_method: c.payment_method,
+      custom_total_price: c.custom_total_price !== undefined && c.custom_total_price !== null ? Number(c.custom_total_price) : undefined
     }))
 
   try {
@@ -864,20 +873,24 @@ const submitCompleteAppointment = async () => {
             
             <div>
               <label class="block text-[11px] font-bold text-gray-600 mb-1">選擇課程</label>
-              <select v-model="newCourse.course_id" class="w-full border border-gray-300 rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-[#154337] outline-none">
+              <select v-model="newCourse.course_id" @change="onNewCourseChange(newCourse)" class="w-full border border-gray-300 rounded-xl p-2 text-xs bg-white focus:ring-2 focus:ring-[#154337] outline-none">
                 <option value="" disabled>請選擇課程...</option>
                 <option v-for="c in availableCoursesList" :key="c.id" :value="c.id">{{ c.name }} (單價 ${{ c.price }})</option>
               </select>
             </div>
             
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-3 gap-2">
               <div>
                 <label class="block text-[10px] font-bold text-gray-600 mb-1">購買總堂數</label>
-                <input type="number" v-model.number="newCourse.buy_amount" min="1" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none" />
+                <input type="number" v-model.number="newCourse.buy_amount" @input="onNewCourseChange(newCourse)" min="1" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none font-mono" />
               </div>
               <div>
                 <label class="block text-[10px] font-bold text-gray-600 mb-1">本次消耗堂數</label>
-                <input type="number" v-model.number="newCourse.use_count" min="1" :max="newCourse.buy_amount" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none" />
+                <input type="number" v-model.number="newCourse.use_count" min="1" :max="newCourse.buy_amount" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none font-mono" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-600 mb-1">成交總金額 ($)</label>
+                <input type="number" v-model.number="newCourse.custom_total_price" min="0" placeholder="可覆寫折扣價" class="w-full border border-gray-300 rounded-xl p-1.5 text-xs focus:ring-2 focus:ring-[#154337] outline-none font-mono bg-amber-50/50 text-amber-900 border-amber-200" />
               </div>
             </div>
 
