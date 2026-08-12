@@ -365,6 +365,120 @@ const isWeeklyOff = (dayIndex: number) => {
 }
 
 // ==========================================
+// 6.5 休假多選項與排程模組 (單週 / 單月 / 固定公休)
+// ==========================================
+const holidayModeTab = ref<'weekly' | 'single_week' | 'monthly_range'>('weekly')
+
+// 單週公休 State
+const singleWeekStartDate = ref('')
+const singleWeekEndDate = ref('')
+const singleWeekReason = ref('單週門市休假')
+
+// 單月 / 連假區間公休 State
+const rangeStartDate = ref('')
+const rangeEndDate = ref('')
+const rangeReason = ref('單月/連假門市公休')
+
+// 快捷選擇目前顯示月份的第 N 週
+const setQuickSingleWeek = (weekNum: number) => {
+  const year = currentDate.value.getFullYear()
+  const month = currentDate.value.getMonth()
+  
+  let d = new Date(year, month, 1)
+  while (d.getDay() !== 1) {
+    d.setDate(d.getDate() + 1)
+  }
+  d.setDate(d.getDate() + (weekNum - 1) * 7)
+  const startDateStr = formatDateToString(d)
+  
+  const endD = new Date(d)
+  endD.setDate(endD.getDate() + 6)
+  const endDateStr = formatDateToString(endD)
+
+  singleWeekStartDate.value = startDateStr
+  singleWeekEndDate.value = endDateStr
+}
+
+// 快捷選擇「全月」
+const setQuickFullMonth = () => {
+  const year = currentDate.value.getFullYear()
+  const month = currentDate.value.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+
+  rangeStartDate.value = formatDateToString(firstDay)
+  rangeEndDate.value = formatDateToString(lastDay)
+  rangeReason.value = `${currentDate.value.getMonth() + 1} 月份全月店休`
+}
+
+// 批量寫入全天公休 (全天 / 連假 / 單週 / 單月)
+const batchCreateFullDayOff = async (startDateStr: string, endDateStr: string, reasonText: string) => {
+  if (!startDateStr || !endDateStr) {
+    alert('請選擇有效的起訖日期！')
+    return
+  }
+  const start = new Date(startDateStr)
+  const end = new Date(endDateStr)
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    alert('無效的日期格式')
+    return
+  }
+  if (start > end) {
+    alert('開始日期不可晚於結束日期！')
+    return
+  }
+
+  const dateList: string[] = []
+  const curr = new Date(start)
+  while (curr <= end) {
+    dateList.push(formatDateToString(curr))
+    curr.setDate(curr.getDate() + 1)
+  }
+
+  if (dateList.length > 60) {
+    alert('單次批量排休不可超過 60 天！')
+    return
+  }
+
+  if (!confirm(`確定要將 ${startDateStr} 至 ${endDateStr}（共 ${dateList.length} 天）設定為全天公休嗎？`)) return
+
+  try {
+    for (const dStr of dateList) {
+      const exists = holidays.value.some(h => h.type === 'full_day' && h.date === dStr)
+      if (!exists) {
+        await fetch(`${backendUrl}/api/holidays`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'full_day', date: dStr, reason: reasonText || '門市公休' })
+        })
+      }
+    }
+    alert(`✅ 已成功為 ${startDateStr} ~ ${endDateStr} 批次標註公休！`)
+    await fetchHolidays()
+  } catch (err: any) {
+    alert('批量排休設定失敗：' + err.message)
+  }
+}
+
+// 批量清除公休
+const batchClearFullDayOff = async (startDateStr: string, endDateStr: string) => {
+  if (!startDateStr || !endDateStr) return alert('請選擇有效的起訖日期')
+  const toDelete = holidays.value.filter(h => h.type === 'full_day' && h.date >= startDateStr && h.date <= endDateStr)
+  if (toDelete.length === 0) return alert('該區間內無單天公休紀錄可供取消。')
+  if (!confirm(`確定要清除 ${startDateStr} 至 ${endDateStr} 之間的 ${toDelete.length} 筆公休設定嗎？`)) return
+
+  try {
+    for (const h of toDelete) {
+      await fetch(`${backendUrl}/api/holidays?id=${h.id}`, { method: 'DELETE' })
+    }
+    alert('✅ 已成功清除該區間之公休紀錄！')
+    await fetchHolidays()
+  } catch (e: any) {
+    alert('清除失敗：' + e.message)
+  }
+}
+
+// ==========================================
 // 7. 客戶詳情與問卷管理模組
 // ==========================================
 const selectedClient = ref<any>(null)
@@ -544,26 +658,144 @@ const saveUserNotes = async (appt: any) => {
 
     <!-- 行事曆主體 (Double-Bezel 容器) -->
     <div class="space-y-6">
-      <!-- 1. 每週固定公休設定卡片 -->
+      <!-- 1. 休假與公休多元配置面板 (支援 每週固定 / 單週特例 / 單月與連假) -->
       <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl shadow-xs">
-        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h3 class="font-bold text-[#154337] text-sm sm:text-base flex items-center gap-2">
-              <Icon name="mdi:calendar-sync" class="text-emerald-600 text-lg" />
-              每週固定公休設定
-            </h3>
-            <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
-              勾選的星期將自動於月曆上標註為全天公休，禁止線上預約
-            </p>
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 space-y-4">
+          
+          <!-- 頁籤導覽 (Tabs Header) -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+            <div>
+              <h3 class="font-bold text-[#154337] text-sm sm:text-base flex items-center gap-2">
+                <Icon name="mdi:calendar-multiselect" class="text-emerald-600 text-lg" />
+                <span>休假與公休多元配置中心</span>
+              </h3>
+              <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+                提供每週固定公休、單週特例休假、與單月/連假批量設定，滿足店家彈性排班
+              </p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex items-center p-1 bg-[#FAF4EE] rounded-xl border border-[#154337]/10 text-xs font-bold shrink-0">
+              <button 
+                type="button"
+                @click="holidayModeTab = 'weekly'"
+                :class="['px-3 py-1.5 rounded-lg transition cursor-pointer', holidayModeTab === 'weekly' ? 'bg-[#154337] text-white shadow-2xs' : 'text-gray-600 hover:text-[#154337]']"
+              >
+                每週固定公休
+              </button>
+              <button 
+                type="button"
+                @click="holidayModeTab = 'single_week'"
+                :class="['px-3 py-1.5 rounded-lg transition cursor-pointer', holidayModeTab === 'single_week' ? 'bg-[#154337] text-white shadow-2xs' : 'text-gray-600 hover:text-[#154337]']"
+              >
+                單週特例公休
+              </button>
+              <button 
+                type="button"
+                @click="holidayModeTab = 'monthly_range'"
+                :class="['px-3 py-1.5 rounded-lg transition cursor-pointer', holidayModeTab === 'monthly_range' ? 'bg-[#154337] text-white shadow-2xs' : 'text-gray-600 hover:text-[#154337]']"
+              >
+                單月/連假區間公休
+              </button>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2 w-full md:w-auto justify-between md:justify-start">
-            <label v-for="(day, index) in weekdays" :key="index" class="cursor-pointer relative">
-              <input type="checkbox" class="peer sr-only" :checked="isWeeklyOff(index)" @change="toggleWeeklyOff(index)" />
-              <div class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl text-xs sm:text-sm font-bold border-2 transition-all duration-200 peer-checked:bg-[#154337] peer-checked:border-[#154337] peer-checked:text-white peer-checked:shadow-sm border-gray-200 text-gray-400 hover:border-[#154337] hover:text-[#154337] active:scale-95">
-                {{ day }}
+
+          <!-- Tab Content 1: 每週固定公休 -->
+          <div v-if="holidayModeTab === 'weekly'" class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in">
+            <div class="text-xs text-gray-600">
+              <span class="font-bold text-[#154337]">每週常態公休：</span>勾選的星期將固定標註為全天公休（例如每週一全店休息）。
+            </div>
+            <div class="flex flex-wrap gap-2 w-full md:w-auto justify-between md:justify-start">
+              <label v-for="(day, index) in weekdays" :key="index" class="cursor-pointer relative">
+                <input type="checkbox" class="peer sr-only" :checked="isWeeklyOff(index)" @change="toggleWeeklyOff(index)" />
+                <div class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl text-xs sm:text-sm font-bold border-2 transition-all duration-200 peer-checked:bg-[#154337] peer-checked:border-[#154337] peer-checked:text-white peer-checked:shadow-sm border-gray-200 text-gray-400 hover:border-[#154337] hover:text-[#154337] active:scale-95">
+                  {{ day }}
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: 單週特例公休 -->
+          <div v-else-if="holidayModeTab === 'single_week'" class="space-y-3 animate-fade-in">
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="font-bold text-[#154337]">快捷選擇 ({{ currentDate.getFullYear() }}年{{ currentDate.getMonth() + 1 }}月)：</span>
+              <button type="button" @click="setQuickSingleWeek(1)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 1 週</button>
+              <button type="button" @click="setQuickSingleWeek(2)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 2 週</button>
+              <button type="button" @click="setQuickSingleWeek(3)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 3 週</button>
+              <button type="button" @click="setQuickSingleWeek(4)" class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg font-bold hover:bg-amber-100 transition cursor-pointer">第 4 週</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end bg-[#FAF4EE]/50 p-3 rounded-2xl border border-[#154337]/10">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">單週開始日期</label>
+                <input type="date" v-model="singleWeekStartDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
               </div>
-            </label>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">單週結束日期</label>
+                <input type="date" v-model="singleWeekEndDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  type="button"
+                  @click="batchCreateFullDayOff(singleWeekStartDate, singleWeekEndDate, singleWeekReason)" 
+                  class="flex-1 py-2 px-3 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-2xs cursor-pointer"
+                >
+                  套用單週公休
+                </button>
+                <button 
+                  type="button"
+                  @click="batchClearFullDayOff(singleWeekStartDate, singleWeekEndDate)" 
+                  class="py-2 px-3 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer"
+                >
+                  清除
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- Tab Content 3: 單月 / 連假區間公休 -->
+          <div v-else-if="holidayModeTab === 'monthly_range'" class="space-y-3 animate-fade-in">
+            <div class="flex items-center justify-between text-xs">
+              <div class="text-gray-600">
+                <span class="font-bold text-[#154337]">單月/連假指定區間：</span>可用於設定整月門市休假、員工旅遊或端午/中秋/春節連休。
+              </div>
+              <button type="button" @click="setQuickFullMonth" class="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg font-bold hover:bg-emerald-100 transition cursor-pointer">
+                快捷選擇當月全月 ({{ currentDate.getMonth() + 1 }}月)
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end bg-[#FAF4EE]/50 p-3 rounded-2xl border border-[#154337]/10">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">開始日期</label>
+                <input type="date" v-model="rangeStartDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">結束日期</label>
+                <input type="date" v-model="rangeEndDate" class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">公休說明/備註</label>
+                <input type="text" v-model="rangeReason" placeholder="例如：春節年假店休" class="w-full border border-gray-300 rounded-xl p-2 text-xs bg-white outline-none focus:ring-2 focus:ring-[#154337]" />
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  type="button"
+                  @click="batchCreateFullDayOff(rangeStartDate, rangeEndDate, rangeReason)" 
+                  class="flex-1 py-2 px-3 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-2xs cursor-pointer"
+                >
+                  套用連假區間
+                </button>
+                <button 
+                  type="button"
+                  @click="batchClearFullDayOff(rangeStartDate, rangeEndDate)" 
+                  class="py-2 px-3 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition cursor-pointer"
+                >
+                  清除
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
