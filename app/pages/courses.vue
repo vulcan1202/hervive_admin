@@ -21,6 +21,43 @@ const courseForm = reactive({ id: null as number | null, name: '', description: 
 const sellForm = reactive({ user_id: '', course_id: '', amount: 1, custom_total_price: undefined as number | undefined, payment_method: 'Cash' })
 const editPackageForm = reactive({ id: null as number | null, course_id: '', amount: 1, client_name: '', course_name: '' })
 
+// 搜尋會員相關 State 與邏輯
+const userSearchText = ref('')
+const isUserDropdownOpen = ref(false)
+
+const filteredUsersList = computed(() => {
+  if (!userSearchText.value.trim()) return usersList.value
+  const q = userSearchText.value.trim().toLowerCase()
+  return usersList.value.filter(u => {
+    const fullName = `${u.last_name || ''}${u.first_name || ''}`.toLowerCase()
+    const phone = (u.phone || '').toLowerCase()
+    return fullName.includes(q) || phone.includes(q)
+  })
+})
+
+const selectUserForSell = (u: any) => {
+  sellForm.user_id = u.id
+  userSearchText.value = `${u.last_name || ''}${u.first_name || ''} (${u.phone || ''})`
+  isUserDropdownOpen.value = false
+}
+
+const clearSelectedUser = () => {
+  sellForm.user_id = ''
+  userSearchText.value = ''
+  isUserDropdownOpen.value = true
+}
+
+const openSellModal = () => {
+  sellForm.user_id = ''
+  sellForm.course_id = ''
+  sellForm.amount = 1
+  sellForm.custom_total_price = undefined
+  sellForm.payment_method = 'Cash'
+  userSearchText.value = ''
+  isUserDropdownOpen.value = false
+  showSellModal.value = true
+}
+
 const updateSellTotalPrice = () => {
   const selectedCourse = coursesList.value.find(c => c.id === Number(sellForm.course_id))
   if (selectedCourse && typeof selectedCourse.price === 'number') {
@@ -281,7 +318,7 @@ onMounted(() => fetchData())
         </button>
 
         <button 
-          @click="showSellModal = true" 
+          @click="openSellModal()" 
           class="flex-1 sm:flex-initial px-4 py-2.5 bg-[#154337] text-white rounded-xl text-xs font-bold hover:bg-[#0e2f27] transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
         >
           <Icon name="mdi:cart-outline" class="text-base" />
@@ -542,12 +579,55 @@ onMounted(() => fetchData())
           <span>銷售會員包套</span>
         </h3>
         <form @submit.prevent="handleSellPackage" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">選擇客戶 <span class="text-rose-500">*</span></label>
-            <select v-model="sellForm.user_id" required class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none">
-              <option value="" disabled>請選擇會員...</option>
-              <option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.last_name }}{{ u.first_name }} ({{ u.phone }})</option>
-            </select>
+          <!-- 搜尋 + 下拉選單會員選擇器 -->
+          <div class="relative space-y-1">
+            <label class="block text-xs font-bold text-gray-700">選擇客戶 <span class="text-rose-500">*</span></label>
+            <div class="relative">
+              <input 
+                type="text" 
+                v-model="userSearchText" 
+                @focus="isUserDropdownOpen = true"
+                @input="isUserDropdownOpen = true"
+                placeholder="輸入姓名或電話搜尋會員..." 
+                class="w-full border border-gray-300 rounded-xl p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none pr-8 font-medium"
+              />
+              <button 
+                v-if="sellForm.user_id || userSearchText" 
+                type="button" 
+                @click="clearSelectedUser" 
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-0.5 cursor-pointer"
+              >
+                <Icon name="mdi:close" size="14" />
+              </button>
+              <Icon 
+                v-else 
+                name="mdi:chevron-down" 
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size="18" 
+              />
+            </div>
+
+            <!-- 可搜尋下拉清單 -->
+            <div 
+              v-if="isUserDropdownOpen" 
+              class="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-gray-200 z-50 max-h-52 overflow-y-auto divide-y divide-gray-50"
+            >
+              <div 
+                v-if="filteredUsersList.length === 0" 
+                class="p-3 text-xs text-gray-400 text-center"
+              >
+                找不到符合的會員
+              </div>
+              <div 
+                v-for="u in filteredUsersList" 
+                :key="u.id" 
+                @click="selectUserForSell(u)"
+                :class="['p-2.5 text-xs sm:text-sm cursor-pointer hover:bg-[#FAF4EE] transition flex justify-between items-center', String(sellForm.user_id) === String(u.id) ? 'bg-[#FAF4EE] font-bold text-[#154337]' : 'text-gray-700']"
+              >
+                <span class="font-bold">{{ u.last_name }}{{ u.first_name }}</span>
+                <span class="text-gray-400 font-mono text-xs">{{ u.phone }}</span>
+              </div>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">選擇購買課程 <span class="text-rose-500">*</span></label>
