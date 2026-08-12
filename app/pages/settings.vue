@@ -167,8 +167,57 @@ const handleDeleteBeautician = async () => {
   }
 }
 
+// 系統設定 State (預約開放與限制)
+const bookingAdvanceDays = ref(60)
+const bookingEnabled = ref(true)
+const isSavingSettings = ref(false)
+
+const fetchSystemSettings = async () => {
+  try {
+    const res = await fetch(`${backendUrl}/api/settings`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.data) {
+        bookingAdvanceDays.value = Number(data.data.booking_advance_days || 60)
+        bookingEnabled.value = data.data.booking_enabled !== false
+      }
+    }
+  } catch (e) {
+    console.error('Fetch system settings error:', e)
+  }
+}
+
+const saveSystemSettings = async () => {
+  if (bookingAdvanceDays.value < 1) {
+    showToast('開放預約天數必須大於 0 天', 'error')
+    return
+  }
+  isSavingSettings.value = true
+  try {
+    const res = await fetch(`${backendUrl}/api/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        booking_advance_days: Number(bookingAdvanceDays.value),
+        booking_enabled: Boolean(bookingEnabled.value)
+      })
+    })
+    if (res.ok) {
+      showToast('✅ 預約系統設定已成功更新！', 'success')
+    } else {
+      showToast('儲存系統設定失敗', 'error')
+    }
+  } catch (e) {
+    console.error('Save system settings error:', e)
+    showToast('系統發生錯誤，無法儲存設定', 'error')
+  } finally {
+    isSavingSettings.value = false
+  }
+}
+
 onMounted(() => {
   fetchBeauticians()
+  fetchSystemSettings()
 })
 </script>
 
@@ -192,10 +241,10 @@ onMounted(() => {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs">
       <div>
         <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#154337]/10 text-[#154337] tracking-wider uppercase">團隊管理</span>
-          <h1 class="text-2xl font-bold text-[#154337]">系統設定 — 美容師團隊管理</h1>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#154337]/10 text-[#154337] tracking-wider uppercase">系統設定</span>
+          <h1 class="text-2xl font-bold text-[#154337]">門市預約與團隊管理設定</h1>
         </div>
-        <p class="text-xs sm:text-sm text-gray-500 mt-1">管理門市駐店美容師與芳療師名單，自動連動預約與排班系統</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-1">管理線上預約開放天數、開關狀態與門市駐店美容師團隊名單</p>
       </div>
 
       <button 
@@ -205,6 +254,74 @@ onMounted(() => {
         <Icon name="mdi:account-plus-outline" class="text-lg" />
         <span>新增美容師</span>
       </button>
+    </div>
+
+    <!-- 🌟 線上預約開放與限制設定卡片 (Slider Toggle Switch & 天數設定) -->
+    <div class="p-6 rounded-3xl bg-white border border-[#154337]/10 shadow-xs space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#154337]/10 flex items-center justify-center text-[#154337]">
+            <Icon name="mdi:calendar-clock-outline" class="text-xl" />
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#154337]">線上預約開放與開關設定</h2>
+            <p class="text-xs text-gray-500">自訂顧客可預約的未來天數上限，或隨時暫停/開啟線上預約</p>
+          </div>
+        </div>
+        <button 
+          @click="saveSystemSettings"
+          :disabled="isSavingSettings"
+          class="px-5 py-2.5 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
+        >
+          <Icon name="mdi:content-save-outline" class="text-base" />
+          <span>{{ isSavingSettings ? '儲存中...' : '儲存預約設定' }}</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 線上預約總開關 (Slider Toggle Switch) -->
+        <div class="p-4 rounded-2xl bg-[#FAF4EE]/50 border border-[#154337]/10 flex items-center justify-between gap-4">
+          <div>
+            <div class="text-xs font-bold text-gray-800 flex items-center gap-2">
+              <span>線上預約服務功能</span>
+              <span :class="['px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-2xs', bookingEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200']">
+                {{ bookingEnabled ? '✅ 服務開放中' : '⛔ 暫停預約中' }}
+              </span>
+            </div>
+            <p class="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
+              {{ bookingEnabled ? '前台顧客可正常瀏覽並預約未來可用的時段。' : '關閉後前台將暫停開放預約，並提示顧客直接聯繫門市。' }}
+            </p>
+          </div>
+
+          <!-- Slider Switch -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" v-model="bookingEnabled" class="sr-only peer">
+            <div class="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <!-- 預約開放天數上限設定 (預設 60 天) -->
+        <div class="p-4 rounded-2xl bg-[#FAF4EE]/50 border border-[#154337]/10 space-y-2">
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-bold text-gray-800">開放預約天數上限 (天)</label>
+            <span class="text-xs font-mono font-bold text-[#154337] bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
+              開放未來 {{ bookingAdvanceDays }} 天
+            </span>
+          </div>
+          <div class="flex items-center gap-3">
+            <input 
+              type="number" 
+              v-model.number="bookingAdvanceDays" 
+              min="1" 
+              max="365"
+              class="w-full border border-gray-300 rounded-xl p-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-[#154337] bg-white outline-none" 
+            />
+          </div>
+          <p class="text-[11px] text-gray-500 leading-relaxed">
+            預設為 60 天。設定 60 代表顧客最多僅能預約即日起算 60 天內的日期。
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- 美容師團隊概覽卡片 -->
