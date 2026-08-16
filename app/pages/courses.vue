@@ -599,11 +599,11 @@ onMounted(() => fetchData())
                   </div>
                 </div>
 
-                <!-- 操作按鈕列 (手機端 4 欄按鈕網格，觸控回饋佳) -->
+                <!-- 操作按鈕列 (手機端 4 欄等寬等高按鈕網格，圖示與文字完全對齊) -->
                 <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-gray-100">
                   <button 
                     @click="openHistoryModal(pkg)" 
-                    class="px-2 py-2 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center gap-0.5"
+                    class="h-8 inline-flex items-center justify-center gap-0.5 px-1.5 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer"
                     title="查看使用與異動紀錄"
                   >
                     <Icon name="mdi:history" size="13" />
@@ -612,30 +612,33 @@ onMounted(() => fetchData())
 
                   <button 
                     @click="openEditPackageModal(pkg)" 
-                    class="px-2 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center"
+                    class="h-8 inline-flex items-center justify-center gap-0.5 px-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs active:scale-95 cursor-pointer"
                   >
-                    修改
+                    <Icon name="mdi:pencil-outline" size="13" />
+                    <span>修改</span>
                   </button>
 
                   <button 
                     @click="openRefundModal(pkg)" 
                     :disabled="pkg.remaining_count <= 0" 
-                    class="px-2 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center justify-center"
+                    class="h-8 inline-flex items-center justify-center gap-0.5 px-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 disabled:pointer-events-none active:scale-95 cursor-pointer"
                   >
-                    退款
+                    <Icon name="mdi:cash-refund" size="13" />
+                    <span>退款</span>
                   </button>
 
                   <button 
                     @click="deleteUserPackage(pkg)" 
-                    class="px-2 py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center"
+                    class="h-8 inline-flex items-center justify-center gap-0.5 px-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs active:scale-95 cursor-pointer"
                   >
-                    刪除
+                    <Icon name="mdi:trash-can-outline" size="13" />
+                    <span>刪除</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- 💻 桌機端：傳統精緻表格 (>= 640px) -->
+            <!-- 💻 桌機端：傳統精緻表格 (>= 640px，按鈕尺寸與圖示完全規格化一致) -->
             <div class="hidden sm:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
@@ -666,34 +669,42 @@ onMounted(() => fetchData())
                         {{ pkg.remaining_count > 0 ? '進行中' : '已用罄' }}
                       </span>
                     </td>
-                    <td class="p-4 text-right space-x-1.5">
-                      <button 
-                        @click="openHistoryModal(pkg)" 
-                        class="px-2.5 py-1.5 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs inline-flex items-center gap-1 cursor-pointer active:scale-95"
-                        title="查看使用與異動紀錄"
-                      >
-                        <Icon name="mdi:history" size="14" />
-                        <span>紀錄</span>
-                      </button>
-                      <button 
-                        @click="openEditPackageModal(pkg)" 
-                        class="px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs cursor-pointer active:scale-95"
-                      >
-                        修改
-                      </button>
-                      <button 
-                        @click="openRefundModal(pkg)" 
-                        :disabled="pkg.remaining_count <= 0" 
-                        class="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 cursor-pointer active:scale-95"
-                      >
-                        退款
-                      </button>
-                      <button 
-                        @click="deleteUserPackage(pkg)" 
-                        class="px-2.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer active:scale-95"
-                      >
-                        刪除
-                      </button>
+                    <td class="p-4 text-right">
+                      <div class="inline-flex items-center justify-end gap-1.5">
+                        <button 
+                          @click="openHistoryModal(pkg)" 
+                          class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+                          title="查看使用與異動紀錄"
+                        >
+                          <Icon name="mdi:history" size="13" />
+                          <span>紀錄</span>
+                        </button>
+                        <button 
+                          @click="openEditPackageModal(pkg)" 
+                          class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 hover:border-gray-300 transition shadow-2xs cursor-pointer active:scale-95"
+                          title="修改包套內容與價格"
+                        >
+                          <Icon name="mdi:pencil-outline" size="13" />
+                          <span>修改</span>
+                        </button>
+                        <button 
+                          @click="openRefundModal(pkg)" 
+                          :disabled="pkg.remaining_count <= 0" 
+                          class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer active:scale-95"
+                          title="辦理課程退款"
+                        >
+                          <Icon name="mdi:cash-refund" size="13" />
+                          <span>退款</span>
+                        </button>
+                        <button 
+                          @click="deleteUserPackage(pkg)" 
+                          class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer active:scale-95"
+                          title="刪除包套紀錄"
+                        >
+                          <Icon name="mdi:trash-can-outline" size="13" />
+                          <span>刪除</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
