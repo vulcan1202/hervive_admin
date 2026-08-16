@@ -85,6 +85,70 @@ const refundForm = reactive({
   description: ''
 })
 
+// 🌟 會員包套搜尋、用罄開關與歷史紀錄 State
+const packageSearchText = ref('')
+const showFinishedPackages = ref(false) // 預設隱藏已用罄包套
+
+const showHistoryModal = ref(false)
+const selectedPackageForHistory = ref<any>(null)
+const packageHistoryList = ref<any[]>([])
+const loadingHistory = ref(false)
+
+// 包套統計計算
+const activePackagesCount = computed(() => {
+  return userCoursesList.value.filter(p => (p.remaining_count || 0) > 0).length
+})
+
+const finishedPackagesCount = computed(() => {
+  return userCoursesList.value.filter(p => (p.remaining_count || 0) <= 0).length
+})
+
+// 🌟 過濾後的包套列表 (結合用罄開關與用戶姓名/電話/課程名稱即時搜尋)
+const filteredUserPackagesList = computed(() => {
+  let list = userCoursesList.value
+
+  // 1. 已用罄開關過濾 (預設 false: 只看進行中 remaining_count > 0)
+  if (!showFinishedPackages.value) {
+    list = list.filter(pkg => (pkg.remaining_count || 0) > 0)
+  }
+
+  // 2. 搜尋關鍵字 (支援姓名、電話、課程名稱)
+  if (packageSearchText.value.trim()) {
+    const q = packageSearchText.value.trim().toLowerCase()
+    list = list.filter(pkg => {
+      const clientName = (pkg.client_name || '').toLowerCase()
+      const clientPhone = (pkg.client_phone || '').toLowerCase()
+      const courseName = (pkg.course_name || '').toLowerCase()
+      return clientName.includes(q) || clientPhone.includes(q) || courseName.includes(q)
+    })
+  }
+
+  return list
+})
+
+// 🌟 開啟包套課程使用與異動歷史紀錄 Modal
+const openHistoryModal = async (pkg: any) => {
+  selectedPackageForHistory.value = pkg
+  packageHistoryList.value = []
+  loadingHistory.value = true
+  showHistoryModal.value = true
+
+  try {
+    const res = await fetch(`${backendUrl}/api/users-courses/history?user_course_id=${pkg.id}`)
+    if (res.ok) {
+      const data = await res.json()
+      packageHistoryList.value = data.data || []
+    } else {
+      packageHistoryList.value = []
+    }
+  } catch (err) {
+    console.error('讀取包套使用紀錄失敗', err)
+    packageHistoryList.value = []
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
 const fetchData = async () => {
   loading.value = true
   try {
@@ -370,7 +434,7 @@ onMounted(() => fetchData())
       >
         <span>👤 會員包套剩餘堂數</span>
         <span :class="['px-1.5 py-0.2 rounded-full text-[10px] font-mono', currentTab === 'user_packages' ? 'bg-white/20 text-white' : 'bg-gray-200/80 text-gray-600']">
-          {{ userCoursesList.length }}
+          {{ showFinishedPackages ? userCoursesList.length : activePackagesCount }}
         </span>
       </button>
     </div>
@@ -435,122 +499,206 @@ onMounted(() => fetchData())
       </div>
 
       <!-- 區塊 B: 會員包套剩餘堂數 (手機端響應卡片 + 桌機精緻表格) -->
-      <div v-if="currentTab === 'user_packages'" class="space-y-3 sm:space-y-0 bg-transparent sm:bg-white rounded-2xl sm:shadow-xs sm:border sm:border-gray-200 overflow-hidden">
-        <div v-if="userCoursesList.length === 0" class="py-16 text-center text-gray-400 text-xs sm:text-sm bg-white rounded-2xl">
-          目前尚無會員購買包套紀錄。
-        </div>
-
-        <div v-else>
-          <!-- 📱 手機端：獨立雙重優化包套卡片 (< 640px) -->
-          <div class="block sm:hidden space-y-3">
-            <div 
-              v-for="pkg in userCoursesList" 
-              :key="pkg.id" 
-              class="bg-white rounded-2xl p-4 border border-gray-200/90 shadow-2xs space-y-3"
+      <div v-if="currentTab === 'user_packages'" class="space-y-3.5 sm:space-y-4">
+        <!-- 頂部即時搜尋與已用罄開關工具列 (極致手機與桌機適應) -->
+        <div class="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200/90 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+          <!-- 搜尋框 (支援客戶姓名、電話、課程名稱即時過濾) -->
+          <div class="relative flex-1 max-w-full sm:max-w-md">
+            <Icon 
+              name="mdi:magnify" 
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base" 
+            />
+            <input 
+              type="text" 
+              v-model="packageSearchText" 
+              placeholder="搜尋客戶姓名、電話或課程名稱..." 
+              class="w-full pl-9.5 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
+            />
+            <button 
+              v-if="packageSearchText" 
+              @click="packageSearchText = ''" 
+              type="button"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer"
+              title="清除搜尋"
             >
-              <!-- 頂列：狀態徽章與購買日期 -->
-              <div class="flex justify-between items-center text-xs">
-                <span class="text-gray-400 font-mono text-[10px]">購買日期: {{ pkg.purchase_date?.slice(0, 10) || '-' }}</span>
-                <span :class="['px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0', pkg.remaining_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200']">
-                  {{ pkg.remaining_count > 0 ? '進行中' : '已用罄' }}
-                </span>
-              </div>
-
-              <!-- 中間列：客戶與課程說明 -->
-              <div>
-                <h3 class="font-bold text-gray-900 text-base">{{ pkg.client_name || '未知客戶' }}</h3>
-                <p class="text-xs font-bold text-[#154337] mt-0.5">{{ pkg.course_name || '未知課程' }}</p>
-              </div>
-
-              <!-- 剩餘堂數進度統計框 -->
-              <div class="flex justify-between items-center bg-[#FAF4EE]/70 p-3 rounded-xl">
-                <span class="text-xs text-gray-500 font-bold">堂數進度</span>
-                <div class="text-right">
-                  <span :class="['text-base font-black font-mono', pkg.remaining_count > 0 ? 'text-[#154337]' : 'text-rose-500']">{{ pkg.remaining_count }}</span>
-                  <span class="text-gray-400 mx-1">/</span>
-                  <span class="text-xs font-bold text-gray-600 font-mono">{{ pkg.amount }} 堂</span>
-                </div>
-              </div>
-
-              <!-- 操作按鈕列 -->
-              <div class="flex items-center justify-end gap-2 pt-1 border-t border-gray-100">
-                <button 
-                  @click="openEditPackageModal(pkg)" 
-                  class="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs active:scale-95 cursor-pointer"
-                >
-                  修改
-                </button>
-
-                <button 
-                  @click="openRefundModal(pkg)" 
-                  :disabled="pkg.remaining_count <= 0" 
-                  class="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 disabled:pointer-events-none active:scale-95 cursor-pointer"
-                >
-                  退款
-                </button>
-
-                <button 
-                  @click="deleteUserPackage(pkg)" 
-                  class="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs active:scale-95 cursor-pointer"
-                >
-                  刪除
-                </button>
-              </div>
-            </div>
+              <Icon name="mdi:close" size="14" />
+            </button>
           </div>
 
-          <!-- 💻 桌機端：傳統精緻表格 (>= 640px) -->
-          <div class="hidden sm:block overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
-                  <th class="p-4 font-bold">購買日期</th>
-                  <th class="p-4 font-bold">客戶姓名</th>
-                  <th class="p-4 font-bold">購買課程</th>
-                  <th class="p-4 font-bold text-center">剩餘 / 總堂數</th>
-                  <th class="p-4 font-bold">狀態</th>
-                  <th class="p-4 font-bold text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 text-sm">
-                <tr v-for="pkg in userCoursesList" :key="pkg.id" class="hover:bg-[#FAF4EE]/50 transition">
-                  <td class="p-4 text-gray-500 font-mono text-xs">{{ pkg.purchase_date?.slice(0, 10) || '-' }}</td>
-                  <td class="p-4 font-bold text-gray-900">{{ pkg.client_name || '未知客戶' }}</td>
-                  <td class="p-4 text-[#154337] font-bold">{{ pkg.course_name || '未知課程' }}</td>
-                  <td class="p-4 text-center font-mono">
-                    <span :class="['font-black text-base', pkg.remaining_count > 0 ? 'text-[#154337]' : 'text-rose-500']">{{ pkg.remaining_count }}</span>
+          <!-- 右側：已用罄切換開關與筆數摘要 -->
+          <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+            <!-- 已用罄切換開關 (高階平滑 Switch) -->
+            <label class="flex items-center gap-2 cursor-pointer select-none group">
+              <span class="text-xs font-bold text-gray-600 group-hover:text-[#154337] transition">
+                顯示已用罄包套
+                <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-gray-100 text-gray-500 font-bold border border-gray-200">
+                  {{ finishedPackagesCount }}
+                </span>
+              </span>
+              <!-- Toggle switch pill -->
+              <div class="relative inline-flex items-center">
+                <input 
+                  type="checkbox" 
+                  v-model="showFinishedPackages" 
+                  class="sr-only peer"
+                />
+                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#154337] transition-colors duration-200"></div>
+              </div>
+            </label>
+
+            <!-- 筆數統計標籤 -->
+            <div class="hidden sm:block text-[11px] font-bold text-gray-400 border-l border-gray-200 pl-3">
+              顯示 <span class="text-gray-800 font-mono">{{ filteredUserPackagesList.length }}</span> 筆
+            </div>
+          </div>
+        </div>
+
+        <!-- 列表容器 -->
+        <div class="bg-transparent sm:bg-white rounded-2xl sm:shadow-xs sm:border sm:border-gray-200 overflow-hidden">
+          <div v-if="filteredUserPackagesList.length === 0" class="py-14 sm:py-16 text-center text-gray-400 text-xs sm:text-sm bg-white rounded-2xl border sm:border-0 border-gray-200">
+            <Icon name="mdi:package-variant-closed" class="text-3xl text-gray-300 mx-auto mb-2" />
+            <p v-if="packageSearchText">找不到符合「{{ packageSearchText }}」的會員包套。</p>
+            <p v-else-if="!showFinishedPackages && activePackagesCount === 0 && finishedPackagesCount > 0">
+              目前無進行中的包套（共有 {{ finishedPackagesCount }} 筆已用罄包套，可開啟右上角開關查看）。
+            </p>
+            <p v-else>目前尚無會員購買包套紀錄。</p>
+          </div>
+
+          <div v-else>
+            <!-- 📱 手機端：獨立雙重優化包套卡片 (< 640px) -->
+            <div class="block sm:hidden space-y-3">
+              <div 
+                v-for="pkg in filteredUserPackagesList" 
+                :key="pkg.id" 
+                :class="['bg-white rounded-2xl p-4 border shadow-2xs space-y-3 transition', pkg.remaining_count > 0 ? 'border-gray-200/90' : 'border-gray-200 bg-gray-50/40 opacity-85']"
+              >
+                <!-- 頂列：狀態徽章與購買日期 -->
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-gray-400 font-mono text-[10px]">購買: {{ pkg.purchase_date?.slice(0, 10) || '-' }}</span>
+                  <span :class="['px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0', pkg.remaining_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200']">
+                    {{ pkg.remaining_count > 0 ? '進行中' : '已用罄' }}
+                  </span>
+                </div>
+
+                <!-- 中間列：客戶與課程說明 -->
+                <div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h3 class="font-bold text-gray-900 text-base">{{ pkg.client_name || '未知客戶' }}</h3>
+                    <span v-if="pkg.client_phone" class="text-[11px] text-gray-400 font-mono">({{ pkg.client_phone }})</span>
+                  </div>
+                  <p class="text-xs font-bold text-[#154337] mt-0.5">{{ pkg.course_name || '未知課程' }}</p>
+                </div>
+
+                <!-- 剩餘堂數進度統計框 -->
+                <div class="flex justify-between items-center bg-[#FAF4EE]/70 p-3 rounded-xl">
+                  <span class="text-xs text-gray-500 font-bold">堂數進度</span>
+                  <div class="text-right">
+                    <span :class="['text-base font-black font-mono', pkg.remaining_count > 0 ? 'text-[#154337]' : 'text-rose-500']">{{ pkg.remaining_count }}</span>
                     <span class="text-gray-400 mx-1">/</span>
-                    <span class="text-gray-500 font-bold text-xs">{{ pkg.amount }} 堂</span>
-                  </td>
-                  <td class="p-4">
-                    <span :class="['px-2.5 py-1 rounded-full text-xs font-bold border shadow-2xs', pkg.remaining_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200']">
-                      {{ pkg.remaining_count > 0 ? '進行中' : '已用罄' }}
-                    </span>
-                  </td>
-                  <td class="p-4 text-right space-x-2">
-                    <button 
-                      @click="openEditPackageModal(pkg)" 
-                      class="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs cursor-pointer"
-                    >
-                      修改
-                    </button>
-                    <button 
-                      @click="openRefundModal(pkg)" 
-                      :disabled="pkg.remaining_count <= 0" 
-                      class="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 cursor-pointer"
-                    >
-                      退款
-                    </button>
-                    <button 
-                      @click="deleteUserPackage(pkg)" 
-                      class="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer"
-                    >
-                      刪除
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <span class="text-xs font-bold text-gray-600 font-mono">{{ pkg.amount }} 堂</span>
+                  </div>
+                </div>
+
+                <!-- 操作按鈕列 (手機端 4 欄按鈕網格，觸控回饋佳) -->
+                <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-gray-100">
+                  <button 
+                    @click="openHistoryModal(pkg)" 
+                    class="px-2 py-2 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center gap-0.5"
+                    title="查看使用與異動紀錄"
+                  >
+                    <Icon name="mdi:history" size="13" />
+                    <span>紀錄</span>
+                  </button>
+
+                  <button 
+                    @click="openEditPackageModal(pkg)" 
+                    class="px-2 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center"
+                  >
+                    修改
+                  </button>
+
+                  <button 
+                    @click="openRefundModal(pkg)" 
+                    :disabled="pkg.remaining_count <= 0" 
+                    class="px-2 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center justify-center"
+                  >
+                    退款
+                  </button>
+
+                  <button 
+                    @click="deleteUserPackage(pkg)" 
+                    class="px-2 py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs active:scale-95 cursor-pointer flex items-center justify-center"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 💻 桌機端：傳統精緻表格 (>= 640px) -->
+            <div class="hidden sm:block overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
+                    <th class="p-4 font-bold">購買日期</th>
+                    <th class="p-4 font-bold">客戶姓名</th>
+                    <th class="p-4 font-bold">購買課程</th>
+                    <th class="p-4 font-bold text-center">剩餘 / 總堂數</th>
+                    <th class="p-4 font-bold">狀態</th>
+                    <th class="p-4 font-bold text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
+                  <tr v-for="pkg in filteredUserPackagesList" :key="pkg.id" :class="['transition', pkg.remaining_count > 0 ? 'hover:bg-[#FAF4EE]/50' : 'bg-gray-50/40 text-gray-400 hover:bg-gray-50']">
+                    <td class="p-4 text-gray-500 font-mono text-xs">{{ pkg.purchase_date?.slice(0, 10) || '-' }}</td>
+                    <td class="p-4 font-bold text-gray-900">
+                      {{ pkg.client_name || '未知客戶' }}
+                      <span v-if="pkg.client_phone" class="text-xs text-gray-400 font-mono font-normal ml-1">({{ pkg.client_phone }})</span>
+                    </td>
+                    <td class="p-4 text-[#154337] font-bold">{{ pkg.course_name || '未知課程' }}</td>
+                    <td class="p-4 text-center font-mono">
+                      <span :class="['font-black text-base', pkg.remaining_count > 0 ? 'text-[#154337]' : 'text-rose-500']">{{ pkg.remaining_count }}</span>
+                      <span class="text-gray-400 mx-1">/</span>
+                      <span class="text-gray-500 font-bold text-xs">{{ pkg.amount }} 堂</span>
+                    </td>
+                    <td class="p-4">
+                      <span :class="['px-2.5 py-1 rounded-full text-xs font-bold border shadow-2xs', pkg.remaining_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200']">
+                        {{ pkg.remaining_count > 0 ? '進行中' : '已用罄' }}
+                      </span>
+                    </td>
+                    <td class="p-4 text-right space-x-1.5">
+                      <button 
+                        @click="openHistoryModal(pkg)" 
+                        class="px-2.5 py-1.5 bg-[#154337]/10 text-[#154337] hover:bg-[#154337]/20 border border-[#154337]/20 rounded-xl text-xs font-bold transition shadow-2xs inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                        title="查看使用與異動紀錄"
+                      >
+                        <Icon name="mdi:history" size="14" />
+                        <span>紀錄</span>
+                      </button>
+                      <button 
+                        @click="openEditPackageModal(pkg)" 
+                        class="px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 transition shadow-2xs cursor-pointer active:scale-95"
+                      >
+                        修改
+                      </button>
+                      <button 
+                        @click="openRefundModal(pkg)" 
+                        :disabled="pkg.remaining_count <= 0" 
+                        class="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs disabled:opacity-40 cursor-pointer active:scale-95"
+                      >
+                        退款
+                      </button>
+                      <button 
+                        @click="deleteUserPackage(pkg)" 
+                        class="px-2.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer active:scale-95"
+                      >
+                        刪除
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -789,6 +937,160 @@ onMounted(() => fetchData())
             <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition shadow-md">確認執行退款</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- 🌟 包套使用與異動紀錄 Modal (高階時間軸與進度展示，深耕手機端與桌機端體驗) -->
+    <div v-if="showHistoryModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90dvh] flex flex-col relative border border-gray-100 animate-fade-in overflow-hidden">
+        <!-- 彈窗 Header -->
+        <div class="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-gray-100 flex justify-between items-start">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-xl bg-[#154337]/10 text-[#154337]">
+                <Icon name="mdi:history" class="text-base sm:text-lg" />
+              </span>
+              <h3 class="text-base sm:text-lg font-bold text-[#154337]">包套課程使用紀錄</h3>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+              客戶：<span class="font-bold text-gray-800">{{ selectedPackageForHistory?.client_name }}</span>
+              <span v-if="selectedPackageForHistory?.client_phone" class="font-mono text-gray-400 ml-1">({{ selectedPackageForHistory?.client_phone }})</span>
+              <span class="mx-1.5 text-gray-300">|</span>
+              課程：<span class="font-bold text-[#154337]">{{ selectedPackageForHistory?.course_name }}</span>
+            </p>
+          </div>
+          <button 
+            @click="showHistoryModal = false" 
+            class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer shrink-0"
+          >
+            <Icon name="mdi:close" size="18" />
+          </button>
+        </div>
+
+        <!-- 堂數概覽與進度條 -->
+        <div class="bg-[#FAF4EE]/70 p-3.5 sm:p-4 mx-3 sm:mx-5 mt-3 sm:mt-4 rounded-2xl border border-[#154337]/10">
+          <div class="flex justify-between items-center text-xs">
+            <div>
+              <span class="text-gray-400 font-bold block text-[10px]">購買日期</span>
+              <span class="font-mono font-bold text-gray-700">{{ selectedPackageForHistory?.purchase_date?.slice(0, 10) || '-' }}</span>
+            </div>
+            <div class="text-center">
+              <span class="text-gray-400 font-bold block text-[10px]">已履約消耗</span>
+              <span class="font-mono font-bold text-gray-700">{{ (selectedPackageForHistory?.amount || 0) - (selectedPackageForHistory?.remaining_count || 0) }} 堂</span>
+            </div>
+            <div class="text-right">
+              <span class="text-gray-400 font-bold block text-[10px]">當前剩餘</span>
+              <span :class="['font-mono font-black text-sm sm:text-base', (selectedPackageForHistory?.remaining_count || 0) > 0 ? 'text-[#154337]' : 'text-rose-500']">
+                {{ selectedPackageForHistory?.remaining_count }} / {{ selectedPackageForHistory?.amount }} 堂
+              </span>
+            </div>
+          </div>
+
+          <!-- 進度條 -->
+          <div class="w-full bg-gray-200/80 rounded-full h-2 mt-2.5 overflow-hidden">
+            <div 
+              class="bg-[#154337] h-full rounded-full transition-all duration-500" 
+              :style="{ width: `${Math.min(100, Math.max(0, (((selectedPackageForHistory?.amount || 1) - (selectedPackageForHistory?.remaining_count || 0)) / (selectedPackageForHistory?.amount || 1)) * 100))}%` }"
+            ></div>
+          </div>
+        </div>
+
+        <!-- 異動時間軸列表 (滾動區) -->
+        <div class="p-3 sm:p-5 flex-1 overflow-y-auto max-h-[50vh] space-y-3">
+          <!-- 載入中 -->
+          <div v-if="loadingHistory" class="py-10 text-center text-gray-400 text-xs flex items-center justify-center gap-2">
+            <Icon name="mdi:loading" class="animate-spin text-lg text-[#154337]" />
+            <span>載入異動明細中...</span>
+          </div>
+
+          <!-- 無紀錄 -->
+          <div v-else-if="packageHistoryList.length === 0" class="py-10 text-center text-gray-400 text-xs bg-gray-50/70 rounded-2xl border border-dashed border-gray-200">
+            <Icon name="mdi:clipboard-text-clock-outline" class="text-3xl text-gray-300 mx-auto mb-2" />
+            <p class="font-bold text-gray-600">尚無使用或異動紀錄</p>
+            <p class="text-[11px] text-gray-400 mt-0.5">此包套目前完整保留中，未有到店預約扣堂或退款紀錄。</p>
+          </div>
+
+          <!-- 歷史時間軸 -->
+          <div v-else class="space-y-2.5 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-gray-200/70">
+            <div 
+              v-for="item in packageHistoryList" 
+              :key="item.id" 
+              class="relative pl-8 text-xs"
+            >
+              <!-- 時間軸節點 Icon -->
+              <div 
+                :class="[
+                  'absolute left-1.5 top-2 -translate-x-1/2 w-4.5 h-4.5 rounded-full flex items-center justify-center text-white text-[9px] shadow-2xs ring-4 ring-white',
+                  item.type === 'usage' ? 'bg-emerald-600' :
+                  item.type === 'refund' ? 'bg-rose-500' :
+                  'bg-amber-500'
+                ]"
+              >
+                <Icon :name="item.type === 'usage' ? 'mdi:check' : item.type === 'refund' ? 'mdi:cash-refund' : 'mdi:swap-horizontal'" size="11" />
+              </div>
+
+              <!-- 紀錄卡片 -->
+              <div class="bg-white border border-gray-200/90 rounded-2xl p-3 shadow-2xs space-y-1.5 hover:border-[#154337]/30 transition">
+                <!-- 頂列：類型標籤 + 堂數變動 + 剩餘快照 -->
+                <div class="flex justify-between items-center gap-1">
+                  <div class="flex items-center gap-1.5">
+                    <span 
+                      :class="[
+                        'px-2 py-0.5 rounded-md text-[10px] font-bold border',
+                        item.type === 'usage' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        item.type === 'refund' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      ]"
+                    >
+                      {{ 
+                        item.type === 'usage' ? '到店履約扣堂' :
+                        item.type === 'refund' ? '課程退款扣除' :
+                        item.type === 'adjustment' ? '手動調整' : '異動'
+                      }}
+                    </span>
+                    <span class="font-mono font-black text-rose-600 text-xs">-{{ item.use_count }} 堂</span>
+                  </div>
+
+                  <span class="text-[10.5px] font-mono font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+                    剩餘: {{ item.balance_after !== null && item.balance_after !== undefined ? item.balance_after + ' 堂' : '-' }}
+                  </span>
+                </div>
+
+                <!-- 預約關聯資訊 (若為履約使用) -->
+                <div v-if="item.appointment_date || item.appointment_code" class="text-[11px] text-gray-600 bg-[#FAF4EE]/50 p-2 rounded-xl flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <div v-if="item.appointment_date" class="flex items-center gap-1">
+                    <Icon name="mdi:calendar-clock" class="text-gray-400" size="13" />
+                    <span>{{ item.appointment_date }} {{ item.appointment_start_time || '' }}</span>
+                  </div>
+                  <div v-if="item.beautician_name" class="flex items-center gap-1">
+                    <Icon name="mdi:account-heart-outline" class="text-gray-400" size="13" />
+                    <span>美容師: {{ item.beautician_name }}</span>
+                  </div>
+                  <div v-if="item.appointment_code" class="text-gray-400 font-mono">
+                    #{{ item.appointment_code }}
+                  </div>
+                </div>
+
+                <!-- 說明備註與紀錄時間 -->
+                <div class="flex justify-between items-center text-[10px] text-gray-400 pt-1 border-t border-gray-50">
+                  <span class="truncate max-w-[180px] sm:max-w-[240px] text-gray-500">{{ item.description || '-' }}</span>
+                  <span class="font-mono shrink-0">{{ item.created_at?.slice(0, 16) || '' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 彈窗 Footer -->
+        <div class="p-3.5 sm:p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+          <button 
+            type="button" 
+            @click="showHistoryModal = false" 
+            class="px-5 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-100 transition shadow-2xs cursor-pointer active:scale-95"
+          >
+            關閉
+          </button>
+        </div>
       </div>
     </div>
 
