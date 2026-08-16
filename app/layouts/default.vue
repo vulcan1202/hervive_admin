@@ -433,7 +433,13 @@ const markAsRead = async (item: NotificationItem) => {
   } catch (e) {}
 
   if (item.link) {
-    router.push(item.link)
+    let targetLink = item.link
+    if (item.type === 'financial_weekly' && (targetLink === '/analytics' || !targetLink.includes('preset='))) {
+      targetLink = '/analytics?preset=week'
+    } else if (item.type === 'financial_monthly' && (targetLink === '/analytics' || !targetLink.includes('preset='))) {
+      targetLink = '/analytics?preset=month'
+    }
+    router.push(targetLink)
   }
 }
 

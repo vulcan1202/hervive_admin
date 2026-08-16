@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const config = useRuntimeConfig()
 const backendUrl = config.public.backendUrl
+const route = useRoute()
 
 // 狀態宣告
 const isLoading = ref(true)
-const selectedPreset = ref<'month' | 'quarter' | 'year' | 'custom'>('month')
+const selectedPreset = ref<'week' | 'month' | 'quarter' | 'year' | 'custom'>('month')
 
 // 日期區間
 const startDate = ref('')
@@ -18,13 +19,32 @@ const revenueRecognitions = ref<any[]>([])
 const appointments = ref<any[]>([])
 const products = ref<any[]>([])
 
+// 格式化 YYYY-MM-DD
+const formatDate = (d: Date) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // 設定日期區間快選
-const setPresetRange = (preset: 'month' | 'quarter' | 'year') => {
+const setPresetRange = (preset: 'week' | 'month' | 'quarter' | 'year') => {
   selectedPreset.value = preset
   const today = new Date()
   const year = today.getFullYear()
 
-  if (preset === 'month') {
+  if (preset === 'week') {
+    // 🌟 週報精準計算：本週一至本週日
+    const dayOfWeek = today.getDay() // 0 是週日, 1 是週一...
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + diffToMonday)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    
+    startDate.value = formatDate(monday)
+    endDate.value = formatDate(sunday)
+  } else if (preset === 'month') {
     const month = String(today.getMonth() + 1).padStart(2, '0')
     startDate.value = `${year}-${month}-01`
     const lastDay = new Date(year, today.getMonth() + 1, 0).getDate()
@@ -45,6 +65,8 @@ const setPresetRange = (preset: 'month' | 'quarter' | 'year') => {
 
 // 載入所有分析數據
 const fetchAnalyticsData = async () => {
+  if (!startDate.value || !endDate.value) return
+
   isLoading.value = true
   try {
     const [finRes, revRes, apptRes, prodRes] = await Promise.all([
@@ -82,15 +104,27 @@ const fetchAnalyticsData = async () => {
 
 // 計算指標
 const totalRecognizedRevenue = computed(() => {
-  return financialSummary.value?.revenue_recognition?.total_recognized_revenue || 0
+  const fromSummary = financialSummary.value?.revenue_recognition?.total_recognized_revenue
+  if (fromSummary !== undefined && fromSummary !== null && fromSummary > 0) return fromSummary
+  return revenueRecognitions.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
 })
 
 const courseRevenue = computed(() => {
-  return financialSummary.value?.revenue_recognition?.course_recognized_revenue || 0
+  const fromSummary = financialSummary.value?.revenue_recognition?.course_revenue ?? 
+                      financialSummary.value?.revenue_recognition?.course_recognized_revenue
+  if (fromSummary !== undefined && fromSummary !== null && fromSummary > 0) return fromSummary
+  return revenueRecognitions.value
+    .filter(r => r.source_type === 'course_usage')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
 })
 
 const productRevenue = computed(() => {
-  return financialSummary.value?.revenue_recognition?.product_recognized_revenue || 0
+  const fromSummary = financialSummary.value?.revenue_recognition?.product_revenue ?? 
+                      financialSummary.value?.revenue_recognition?.product_recognized_revenue
+  if (fromSummary !== undefined && fromSummary !== null && fromSummary > 0) return fromSummary
+  return revenueRecognitions.value
+    .filter(r => r.source_type === 'product_sale')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
 })
 
 const netCashFlow = computed(() => {
@@ -120,8 +154,32 @@ const totalInventoryValue = computed(() => {
   return products.value.reduce((acc, p) => acc + (p.cost_price * p.stock_quantity), 0)
 })
 
-onMounted(() => {
+// 🌟 解析 URL 查詢參數以支援週報與通知點擊直接加載當週報表
+const applyRouteParams = () => {
+  const q = route.query
+  if (q.start_date && q.end_date) {
+    startDate.value = String(q.start_date)
+    endDate.value = String(q.end_date)
+    selectedPreset.value = (q.preset as any) || 'custom'
+    fetchAnalyticsData()
+    return
+  }
+
+  if (q.preset === 'week' || q.preset === 'month' || q.preset === 'quarter' || q.preset === 'year') {
+    setPresetRange(q.preset as any)
+    return
+  }
+
+  // 預設為本月
   setPresetRange('month')
+}
+
+onMounted(() => {
+  applyRouteParams()
+})
+
+watch(() => route.fullPath, () => {
+  applyRouteParams()
 })
 </script>
 
@@ -146,10 +204,19 @@ onMounted(() => {
           </p>
         </div>
 
-        <!-- 響應式日期區間選擇器 -->
+        <!-- 響應式日期區間選擇器 (支援本週/本月/本季/本年度) -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#FAF4EE]/70 p-2 sm:p-1.5 rounded-2xl border border-[#154337]/10 w-full xl:w-auto">
           <!-- 快捷天數切換按鈕組 -->
-          <div class="grid grid-cols-3 gap-1.5 sm:flex sm:items-center">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:flex sm:items-center">
+            <button 
+              @click="setPresetRange('week')"
+              :class="[
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center active:scale-95',
+                selectedPreset === 'week' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337] hover:bg-white'
+              ]"
+            >
+              本週
+            </button>
             <button 
               @click="setPresetRange('month')"
               :class="[
