@@ -222,7 +222,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto space-y-6">
+  <div class="max-w-6xl mx-auto py-2 sm:py-4 px-2 sm:px-4 space-y-4 sm:space-y-6">
     <!-- Toast 浮動提示 -->
     <div 
       v-if="toastMessage" 
@@ -238,49 +238,49 @@ onMounted(() => {
     </div>
 
     <!-- 頂部頁面標題與操作按鈕 -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-xs">
       <div>
         <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#154337]/10 text-[#154337] tracking-wider uppercase">系統設定</span>
-          <h1 class="text-2xl font-bold text-[#154337]">門市預約與團隊管理設定</h1>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#154337]/10 text-[#154337] tracking-wider uppercase">系統管理</span>
+          <h1 class="text-xl sm:text-2xl font-black text-[#154337] tracking-tight">門市預約與團隊管理設定</h1>
         </div>
-        <p class="text-xs sm:text-sm text-gray-500 mt-1">管理線上預約開放天數、開關狀態與門市駐店美容師團隊名單</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-1">管理線上預約開放天數、預約總開關與門市駐店美容師團隊名單</p>
       </div>
 
       <button 
         @click="showAddModal = true"
-        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-[#154337] text-white font-medium text-sm shadow-sm hover:bg-[#0e2f27] transition active:scale-98 cursor-pointer shrink-0"
+        class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#154337] text-white font-bold text-xs shadow-md hover:bg-[#0e2f27] transition active:scale-95 cursor-pointer shrink-0"
       >
-        <Icon name="mdi:account-plus-outline" class="text-lg" />
+        <Icon name="mdi:account-plus-outline" class="text-base" />
         <span>新增美容師</span>
       </button>
     </div>
 
     <!-- 🌟 線上預約開放與限制設定卡片 (Slider Toggle Switch & 天數設定) -->
-    <div class="p-6 rounded-3xl bg-white border border-[#154337]/10 shadow-xs space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+    <div class="p-4 sm:p-6 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-4 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-[#154337]/10 flex items-center justify-center text-[#154337]">
+          <div class="w-10 h-10 rounded-2xl bg-[#154337]/10 flex items-center justify-center text-[#154337] shrink-0">
             <Icon name="mdi:calendar-clock-outline" class="text-xl" />
           </div>
           <div>
-            <h2 class="text-base font-bold text-[#154337]">線上預約開放與開關設定</h2>
-            <p class="text-xs text-gray-500">自訂顧客可預約的未來天數上限，或隨時暫停/開啟線上預約</p>
+            <h2 class="text-base font-bold text-[#154337]">線上預約開放與規則設定</h2>
+            <p class="text-xs text-gray-500">自訂顧客可預約的未來天數上限，或隨時暫停/開啟線上預約服務</p>
           </div>
         </div>
         <button 
           @click="saveSystemSettings"
           :disabled="isSavingSettings"
-          class="px-5 py-2.5 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95"
+          class="px-4 py-2 bg-[#154337] text-white text-xs font-bold rounded-xl hover:bg-[#0e2f27] transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
         >
           <Icon name="mdi:content-save-outline" class="text-base" />
           <span>{{ isSavingSettings ? '儲存中...' : '儲存預約設定' }}</span>
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <!-- 線上預約總開關 (Slider Toggle Switch) -->
-        <div class="p-4 rounded-2xl bg-[#FAF4EE]/50 border border-[#154337]/10 flex items-center justify-between gap-4">
+        <div class="p-4 rounded-2xl bg-[#FAF4EE]/60 border border-[#154337]/10 flex items-center justify-between gap-4">
           <div>
             <div class="text-xs font-bold text-gray-800 flex items-center gap-2">
               <span>線上預約服務功能</span>
@@ -296,15 +296,15 @@ onMounted(() => {
           <!-- Slider Switch -->
           <label class="relative inline-flex items-center cursor-pointer shrink-0">
             <input type="checkbox" v-model="bookingEnabled" class="sr-only peer">
-            <div class="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            <div class="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#154337]"></div>
           </label>
         </div>
 
         <!-- 預約開放天數上限設定 (預設 60 天) -->
-        <div class="p-4 rounded-2xl bg-[#FAF4EE]/50 border border-[#154337]/10 space-y-2">
+        <div class="p-4 rounded-2xl bg-[#FAF4EE]/60 border border-[#154337]/10 space-y-2">
           <div class="flex justify-between items-center">
             <label class="text-xs font-bold text-gray-800">開放預約天數上限 (天)</label>
-            <span class="text-xs font-mono font-bold text-[#154337] bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
+            <span class="text-xs font-mono font-bold text-[#154337] bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
               開放未來 {{ bookingAdvanceDays }} 天
             </span>
           </div>
@@ -314,7 +314,7 @@ onMounted(() => {
               v-model.number="bookingAdvanceDays" 
               min="1" 
               max="365"
-              class="w-full border border-gray-300 rounded-xl p-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-[#154337] bg-white outline-none" 
+              class="w-full border border-gray-300 rounded-xl p-2 text-xs font-mono font-bold focus:ring-2 focus:ring-[#154337] bg-white outline-none" 
             />
           </div>
           <p class="text-[11px] text-gray-500 leading-relaxed">
@@ -324,249 +324,234 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 美容師團隊概覽卡片 -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="p-5 rounded-2xl bg-white border border-[#154337]/10 shadow-xs flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-[#154337]/10 flex items-center justify-center text-[#154337]">
-          <Icon name="mdi:account-group-outline" class="text-2xl" />
+    <!-- 美容師團隊名單區塊 -->
+    <div class="space-y-3 sm:space-y-4">
+      <!-- 搜尋與統計列 -->
+      <div class="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="relative flex-1 max-w-full sm:max-w-md">
+          <Icon name="mdi:magnify" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="搜尋美容師姓名或編號..." 
+            class="w-full pl-10 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
+          />
+          <button 
+            v-if="searchQuery" 
+            @click="searchQuery = ''" 
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer"
+            title="清除搜尋"
+          >
+            <Icon name="mdi:close" size="14" />
+          </button>
         </div>
-        <div>
-          <div class="text-xs text-gray-400 font-medium">總駐店美容師人數</div>
-          <div class="text-2xl font-bold text-[#154337]">{{ beauticians.length }} <span class="text-xs font-normal text-gray-500">位</span></div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 text-xs font-bold text-gray-500">
+          <div class="flex items-center gap-1.5 bg-[#FAF4EE]/70 px-3 py-1.5 rounded-xl border border-[#154337]/10">
+            <Icon name="mdi:account-group-outline" class="text-[#154337] text-base" />
+            <span>總駐店美容師：<strong class="text-[#154337] font-mono text-sm">{{ beauticians.length }}</strong> 位</span>
+          </div>
+          <span class="text-gray-400 text-[11px]">共顯示 {{ filteredBeauticians.length }} 位人員</span>
         </div>
       </div>
 
-      <div class="p-5 rounded-2xl bg-white border border-[#154337]/10 shadow-xs flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <Icon name="mdi:check-decagram-outline" class="text-2xl" />
-        </div>
-        <div>
-          <div class="text-xs text-gray-400 font-medium">預約系統服務狀態</div>
-          <div class="text-sm font-semibold text-emerald-700 mt-1">正常提供可排班</div>
-        </div>
-      </div>
-
-      <div class="p-5 rounded-2xl bg-white border border-[#154337]/10 shadow-xs flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-          <Icon name="mdi:link-variant" class="text-2xl" />
-        </div>
-        <div>
-          <div class="text-xs text-gray-400 font-medium">資料庫連動模式</div>
-          <div class="text-sm font-semibold text-gray-700 mt-1">Cloudflare D1 連線</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 搜尋與過濾區 -->
-    <div class="bg-white p-4 rounded-2xl border border-[#154337]/10 shadow-xs flex items-center justify-between gap-4">
-      <div class="relative flex-1 max-w-md">
-        <Icon name="mdi:magnify" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
-        <input 
-          v-model="searchQuery"
-          type="text" 
-          placeholder="搜尋美容師姓名或編號..." 
-          class="w-full pl-10 pr-4 py-2 bg-[#FAF4EE]/60 border border-[#154337]/10 rounded-xl text-sm outline-none focus:border-[#154337] focus:bg-white transition"
-        />
-      </div>
-      <div class="text-xs text-gray-400 hidden sm:block">
-        共 {{ filteredBeauticians.length }} 位人員
-      </div>
-    </div>
-
-    <!-- 載入中骨架屏 -->
-    <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div v-for="i in 6" :key="i" class="p-6 bg-white rounded-3xl border border-gray-100 shadow-xs animate-pulse space-y-4">
-        <div class="flex items-center gap-4">
-          <div class="w-14 h-14 bg-gray-200 rounded-full"></div>
-          <div class="space-y-2 flex-1">
-            <div class="h-4 bg-gray-200 rounded w-2/3"></div>
-            <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+      <!-- 載入中骨架屏 -->
+      <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div v-for="i in 6" :key="i" class="p-6 bg-white rounded-2xl border border-gray-200 shadow-xs animate-pulse space-y-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gray-200 rounded-2xl"></div>
+            <div class="space-y-2 flex-1">
+              <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 空白狀態 -->
-    <div v-else-if="filteredBeauticians.length === 0" class="bg-white p-12 rounded-3xl border border-[#154337]/10 text-center shadow-xs">
-      <div class="w-16 h-16 bg-[#154337]/10 rounded-2xl flex items-center justify-center mx-auto text-[#154337] mb-3">
-        <Icon name="mdi:account-search-outline" class="text-3xl" />
+      <!-- 空白狀態 -->
+      <div v-else-if="filteredBeauticians.length === 0" class="bg-white p-12 rounded-2xl border border-gray-200 text-center shadow-xs">
+        <div class="w-16 h-16 bg-[#154337]/10 rounded-2xl flex items-center justify-center mx-auto text-[#154337] mb-3">
+          <Icon name="mdi:account-search-outline" class="text-3xl" />
+        </div>
+        <h3 class="text-base font-bold text-gray-700">未找到相關美容師</h3>
+        <p class="text-xs text-gray-400 mt-1 max-w-sm mx-auto">請確認搜尋關鍵字是否正確，或是點擊右上角「新增美容師」建立新成員。</p>
       </div>
-      <h3 class="text-lg font-semibold text-gray-700">未找到相關美容師</h3>
-      <p class="text-xs text-gray-400 mt-1 max-w-sm mx-auto">請確認搜尋關鍵字是否正確，或是點擊上方「新增美容師」按鈕建立新成員。</p>
-    </div>
 
-    <!-- 美容師列表網格 (Double-Bezel 質感雙層架構) -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div 
-        v-for="b in filteredBeauticians" 
-        :key="b.id"
-        class="p-1 rounded-3xl bg-[#154337]/5 border border-[#154337]/10 hover:border-[#154337]/30 transition duration-300 group shadow-xs hover:shadow-md"
-      >
-        <div class="p-5 bg-white rounded-[calc(1.5rem-0.25rem)] h-full flex flex-col justify-between space-y-4">
-          <div class="flex items-start justify-between">
-            <div class="flex items-center gap-3.5">
-              <!-- 美容師 Monogram Avatar -->
-              <div class="w-12 h-12 rounded-2xl bg-[#154337] text-white flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition duration-300">
-                {{ b.name.charAt(0) }}
+      <!-- 美容師列表網格 (Double-Bezel 質感雙層架構與標準化操作按鈕) -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div 
+          v-for="b in filteredBeauticians" 
+          :key="b.id"
+          class="p-1 rounded-3xl bg-[#154337]/5 border border-[#154337]/10 hover:border-[#154337]/30 transition duration-300 group shadow-xs hover:shadow-md"
+        >
+          <div class="p-4 sm:p-5 bg-white rounded-[calc(1.5rem-0.25rem)] h-full flex flex-col justify-between space-y-4">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <!-- 美容師 Monogram Avatar -->
+                <div class="w-11 h-11 rounded-2xl bg-[#154337] text-white flex items-center justify-center text-base font-bold shadow-2xs group-hover:scale-105 transition duration-300">
+                  {{ b.name.charAt(0) }}
+                </div>
+                <div>
+                  <h3 class="font-bold text-gray-900 text-base leading-snug">{{ b.name }}</h3>
+                  <span class="inline-block mt-0.5 text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#FAF4EE] text-[#154337] font-bold border border-[#154337]/10">
+                    ID: #{{ String(b.id).padStart(3, '0') }}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h3 class="font-bold text-gray-900 text-base leading-snug">{{ b.name }}</h3>
-                <span class="inline-block mt-0.5 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#FAF4EE] text-[#154337] font-semibold">
-                  ID: #{{ String(b.id).padStart(3, '0') }}
-                </span>
-              </div>
+
+              <!-- 服務中狀態徽章 -->
+              <span class="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                服務中
+              </span>
             </div>
 
-            <!-- 狀態印記 -->
-            <span class="flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/50">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              服務中
-            </span>
-          </div>
+            <!-- 操作按鈕列 (標準規格化高質感按鈕) -->
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-1.5">
+              <button 
+                @click="openEditModal(b)"
+                class="h-7.5 inline-flex items-center justify-center gap-1 px-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 hover:border-gray-300 transition shadow-2xs cursor-pointer active:scale-95"
+                title="修改美容師姓名"
+              >
+                <Icon name="mdi:pencil-outline" size="13" />
+                <span>修改</span>
+              </button>
 
-          <!-- 操作按鈕列 -->
-          <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-            <button 
-              @click="openEditModal(b)"
-              class="px-3 py-1.5 rounded-xl text-xs font-medium text-gray-600 hover:text-[#154337] hover:bg-[#FAF4EE] transition flex items-center gap-1 cursor-pointer"
-            >
-              <Icon name="mdi:pencil-outline" class="text-sm" />
-              <span>修改姓名</span>
-            </button>
-
-            <button 
-              @click="openDeleteModal(b)"
-              class="px-3 py-1.5 rounded-xl text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition flex items-center gap-1 cursor-pointer"
-            >
-              <Icon name="mdi:trash-can-outline" class="text-sm" />
-              <span>刪除</span>
-            </button>
+              <button 
+                @click="openDeleteModal(b)"
+                class="h-7.5 inline-flex items-center justify-center gap-1 px-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer active:scale-95"
+                title="刪除美容師成員"
+              >
+                <Icon name="mdi:trash-can-outline" size="13" />
+                <span>刪除</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 新增美容師 Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#154337]/10 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-fade-in">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-[#154337]/10 flex items-center justify-center text-[#154337]">
+            <div class="w-8 h-8 rounded-xl bg-[#154337]/10 flex items-center justify-center text-[#154337]">
               <Icon name="mdi:account-plus" class="text-lg" />
             </div>
-            <h3 class="text-lg font-bold text-gray-900">新增美容師成員</h3>
+            <h3 class="text-base font-bold text-gray-900">新增美容師成員</h3>
           </div>
-          <button @click="showAddModal = false" class="text-gray-400 hover:text-gray-600 transition">
-            <Icon name="mdi:close" class="text-xl" />
+          <button @click="showAddModal = false" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition cursor-pointer">
+            <Icon name="mdi:close" class="text-lg" />
           </button>
         </div>
 
         <div class="space-y-2">
-          <label class="text-xs font-semibold text-gray-700">美容師姓名 <span class="text-rose-500">*</span></label>
+          <label class="text-xs font-bold text-gray-700">美容師姓名 <span class="text-rose-500">*</span></label>
           <input 
             v-model="newBeauticianName"
             type="text" 
-            placeholder="請輸入美容師真實姓名或暱稱（例如：Emily）"
-            class="w-full px-4 py-2.5 bg-[#FAF4EE]/70 border border-[#154337]/20 rounded-xl text-sm outline-none focus:border-[#154337] focus:bg-white transition"
+            placeholder="請輸入美容師姓名或暱稱（例如：Emily）"
+            class="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none transition"
             @keyup.enter="handleAddBeautician"
           />
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-2">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
           <button 
             @click="showAddModal = false"
-            class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
           >
             取消
           </button>
           <button 
             @click="handleAddBeautician"
             :disabled="isSubmitting"
-            class="px-5 py-2 rounded-xl bg-[#154337] text-white text-sm font-medium hover:bg-[#0e2f27] transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            class="px-5 py-2 rounded-xl bg-[#154337] text-white text-xs font-bold hover:bg-[#0e2f27] transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
           >
-            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-base" />
-            <span>儲存資料</span>
+            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-sm" />
+            <span>儲存成員</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- 編輯美容師 Modal -->
-    <div v-if="showEditModal && editingBeautician" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#154337]/10 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+    <div v-if="showEditModal && editingBeautician" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-fade-in">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-[#154337]/10 flex items-center justify-center text-[#154337]">
+            <div class="w-8 h-8 rounded-xl bg-[#154337]/10 flex items-center justify-center text-[#154337]">
               <Icon name="mdi:pencil" class="text-lg" />
             </div>
-            <h3 class="text-lg font-bold text-gray-900">修改美容師姓名</h3>
+            <h3 class="text-base font-bold text-gray-900">修改美容師姓名</h3>
           </div>
-          <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600 transition">
-            <Icon name="mdi:close" class="text-xl" />
+          <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition cursor-pointer">
+            <Icon name="mdi:close" class="text-lg" />
           </button>
         </div>
 
         <div class="space-y-2">
-          <label class="text-xs font-semibold text-gray-700">美容師姓名</label>
+          <label class="text-xs font-bold text-gray-700">美容師姓名 <span class="text-rose-500">*</span></label>
           <input 
             v-model="editingBeautician.name"
             type="text" 
-            class="w-full px-4 py-2.5 bg-[#FAF4EE]/70 border border-[#154337]/20 rounded-xl text-sm outline-none focus:border-[#154337] focus:bg-white transition"
+            class="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-[#154337] bg-white outline-none transition"
             @keyup.enter="handleUpdateBeautician"
           />
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-2">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
           <button 
             @click="showEditModal = false"
-            class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
           >
             取消
           </button>
           <button 
             @click="handleUpdateBeautician"
             :disabled="isSubmitting"
-            class="px-5 py-2 rounded-xl bg-[#154337] text-white text-sm font-medium hover:bg-[#0e2f27] transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            class="px-5 py-2 rounded-xl bg-[#154337] text-white text-xs font-bold hover:bg-[#0e2f27] transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
           >
-            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-base" />
-            <span>更新名稱</span>
+            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-sm" />
+            <span>更新姓名</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- 刪除美容師 Modal -->
-    <div v-if="showDeleteModal && deletingBeautician" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-rose-100 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+    <div v-if="showDeleteModal && deletingBeautician" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-rose-100 space-y-5 animate-fade-in">
         <div class="flex items-center gap-3 text-rose-600">
-          <div class="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
-            <Icon name="mdi:alert-outline" class="text-2xl" />
+          <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+            <Icon name="mdi:alert-outline" class="text-2xl text-rose-600" />
           </div>
           <div>
-            <h3 class="text-lg font-bold text-gray-900">確認刪除美容師？</h3>
-            <p class="text-xs text-gray-500">刪除後該成員將無法在預約清單中被選擇</p>
+            <h3 class="text-base font-bold text-gray-900">確認刪除美容師？</h3>
+            <p class="text-xs text-rose-600 font-bold">⚠️ 刪除後該成員將無法在預約清單中被選擇</p>
           </div>
         </div>
 
-        <div class="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 text-sm text-gray-700 space-y-1">
+        <div class="p-3.5 bg-rose-50/50 rounded-2xl border border-rose-100 text-xs text-gray-700 space-y-1">
           <div><span class="text-gray-400">美容師姓名：</span> <strong class="text-rose-700">{{ deletingBeautician.name }}</strong></div>
-          <div><span class="text-gray-400">成員編號：</span> <span class="font-mono">#{{ deletingBeautician.id }}</span></div>
+          <div><span class="text-gray-400">成員編號：</span> <span class="font-mono font-bold">#{{ deletingBeautician.id }}</span></div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-2">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
           <button 
             @click="showDeleteModal = false"
-            class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition cursor-pointer"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
           >
             取消
           </button>
           <button 
             @click="handleDeleteBeautician"
             :disabled="isSubmitting"
-            class="px-5 py-2 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-sm"
+            class="px-5 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
           >
-            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-base" />
-            <span>確定刪除</span>
+            <Icon v-if="isSubmitting" name="mdi:loading" class="animate-spin text-sm" />
+            <span>確認刪除</span>
           </button>
         </div>
       </div>
