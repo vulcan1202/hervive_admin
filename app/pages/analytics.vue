@@ -103,12 +103,6 @@ const fetchAnalyticsData = async () => {
 }
 
 // 計算指標
-const totalRecognizedRevenue = computed(() => {
-  const fromSummary = financialSummary.value?.revenue_recognition?.total_recognized_revenue
-  if (fromSummary !== undefined && fromSummary !== null && fromSummary > 0) return fromSummary
-  return revenueRecognitions.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
-})
-
 const courseRevenue = computed(() => {
   const fromSummary = financialSummary.value?.revenue_recognition?.course_revenue ?? 
                       financialSummary.value?.revenue_recognition?.course_recognized_revenue
@@ -120,11 +114,22 @@ const courseRevenue = computed(() => {
 
 const productRevenue = computed(() => {
   const fromSummary = financialSummary.value?.revenue_recognition?.product_revenue ?? 
-                      financialSummary.value?.revenue_recognition?.product_recognized_revenue
+                      financialSummary.value?.revenue_recognition?.product_recognized_revenue ??
+                      financialSummary.value?.revenue_recognition?.product_sales
   if (fromSummary !== undefined && fromSummary !== null && fromSummary > 0) return fromSummary
   return revenueRecognitions.value
     .filter(r => r.source_type === 'product_sale')
     .reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+})
+
+// 🌟 實質認列營收只有課程（不包含產品）
+const totalRecognizedRevenue = computed(() => {
+  return courseRevenue.value
+})
+
+// 🌟 課程實質營收 + 產品銷售總額 (業務綜合規模，用於分布佔比)
+const combinedBusinessTotal = computed(() => {
+  return courseRevenue.value + productRevenue.value
 })
 
 const netCashFlow = computed(() => {
@@ -270,7 +275,7 @@ watch(() => route.fullPath, () => {
 
     <!-- 2. 4 大核心 KPI 統計卡片 (Double-Bezel 7/5/8 高視覺密度) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <!-- 總認列營收 -->
+      <!-- 總認列營收 (僅課程) -->
       <div class="p-1 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200 group">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
@@ -283,7 +288,7 @@ watch(() => route.fullPath, () => {
             <div class="text-xl sm:text-2xl lg:text-3xl font-black text-[#154337] font-mono tracking-tight">
               NT$ {{ totalRecognizedRevenue.toLocaleString() }}
             </div>
-            <p class="text-[11px] text-gray-400 mt-1">來自課程消耗與產品實際販售認列</p>
+            <p class="text-[11px] text-gray-400 mt-1">來自會員包堂與到店課程消耗履約認列</p>
           </div>
         </div>
       </div>
@@ -349,15 +354,15 @@ watch(() => route.fullPath, () => {
 
     <!-- 3. 雙欄分析圖表區 (Double-Bezel 響應式雙欄) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-      <!-- 營收結構拆解 -->
+      <!-- 🌟 課程實質營收與產品銷售分佈圖 -->
       <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 space-y-5">
           <div class="flex items-center justify-between border-b border-gray-100 pb-3">
             <div class="flex items-center gap-2">
               <Icon name="mdi:chart-pie" class="text-xl text-[#154337]" />
-              <h3 class="font-bold text-gray-900 text-base font-serif">當期營收來源拆解</h3>
+              <h3 class="font-bold text-gray-900 text-base font-serif">課程實質營收與產品銷售分佈</h3>
             </div>
-            <span class="text-xs font-mono text-gray-400">Revenue Breakdown</span>
+            <span class="text-xs font-mono text-gray-400">Revenue & Sales Distribution</span>
           </div>
 
           <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
@@ -365,36 +370,36 @@ watch(() => route.fullPath, () => {
           </div>
 
           <div v-else class="space-y-4">
-            <!-- 課程消耗營收條 -->
+            <!-- 課程實質營收條 -->
             <div class="space-y-1.5">
               <div class="flex flex-wrap justify-between text-xs font-medium gap-1">
                 <span class="text-gray-700 flex items-center gap-1.5 font-bold">
                   <span class="w-2.5 h-2.5 rounded-full bg-[#154337]"></span>
-                  會員包堂與課程消耗認列
+                  會員包堂與課程消耗實質營收
                 </span>
                 <span class="font-bold text-[#154337] font-mono">NT$ {{ courseRevenue.toLocaleString() }}</span>
               </div>
               <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   class="h-full bg-[#154337] transition-all duration-500 rounded-full"
-                  :style="{ width: `${totalRecognizedRevenue > 0 ? (courseRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
+                  :style="{ width: `${combinedBusinessTotal > 0 ? (courseRevenue / combinedBusinessTotal) * 100 : 0}%` }"
                 ></div>
               </div>
             </div>
 
-            <!-- 產品銷售營收條 -->
+            <!-- 產品零售銷售條 -->
             <div class="space-y-1.5">
               <div class="flex flex-wrap justify-between text-xs font-medium gap-1">
                 <span class="text-gray-700 flex items-center gap-1.5 font-bold">
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                  零售產品直接銷售認列
+                  零售產品直接銷售總額
                 </span>
-                <span class="font-bold text-[#154337] font-mono">NT$ {{ productRevenue.toLocaleString() }}</span>
+                <span class="font-bold text-emerald-700 font-mono">NT$ {{ productRevenue.toLocaleString() }}</span>
               </div>
               <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   class="h-full bg-emerald-500 transition-all duration-500 rounded-full"
-                  :style="{ width: `${totalRecognizedRevenue > 0 ? (productRevenue / totalRecognizedRevenue) * 100 : 0}%` }"
+                  :style="{ width: `${combinedBusinessTotal > 0 ? (productRevenue / combinedBusinessTotal) * 100 : 0}%` }"
                 ></div>
               </div>
             </div>
@@ -402,15 +407,15 @@ watch(() => route.fullPath, () => {
             <!-- 佔比分析格 -->
             <div class="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 sm:gap-4 text-center">
               <div class="p-3.5 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10">
-                <div class="text-[11px] text-gray-500 font-bold">課程佔比</div>
+                <div class="text-[11px] text-gray-500 font-bold">課程實質營收佔比</div>
                 <div class="text-lg sm:text-xl font-black text-[#154337] font-mono mt-0.5">
-                  {{ totalRecognizedRevenue > 0 ? Math.round((courseRevenue / totalRecognizedRevenue) * 100) : 0 }}%
+                  {{ combinedBusinessTotal > 0 ? Math.round((courseRevenue / combinedBusinessTotal) * 100) : 0 }}%
                 </div>
               </div>
               <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
-                <div class="text-[11px] text-emerald-800 font-bold">產品佔比</div>
+                <div class="text-[11px] text-emerald-800 font-bold">產品銷售額佔比</div>
                 <div class="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-0.5">
-                  {{ totalRecognizedRevenue > 0 ? Math.round((productRevenue / totalRecognizedRevenue) * 100) : 0 }}%
+                  {{ combinedBusinessTotal > 0 ? Math.round((productRevenue / combinedBusinessTotal) * 100) : 0 }}%
                 </div>
               </div>
             </div>
