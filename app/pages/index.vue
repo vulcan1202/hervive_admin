@@ -149,159 +149,220 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto space-y-8">
+  <div class="max-w-6xl mx-auto py-2 sm:py-4 px-2 sm:px-4 space-y-5 sm:space-y-6">
     
-    <!-- 頂部歡迎區塊 (Variance 6: 雙色非對稱裝飾標籤) -->
-    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-[#154337]/10 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
-      <div class="space-y-1 relative z-10">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#154337]/10 text-[#154337] text-xs font-semibold tracking-wide">
-          <span class="w-2 h-2 rounded-full bg-[#154337] animate-ping"></span>
-          即時控制台
+    <!-- 頂部歡迎與即時狀態區塊 -->
+    <div class="bg-white p-5 sm:p-7 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+      <div class="space-y-1.5 relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#154337]/10 text-[#154337] text-xs font-bold tracking-wide">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>即時營運管理中心</span>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337]">早安，系統管理員</h1>
+        <h1 class="text-2xl sm:text-3xl font-black text-[#154337] tracking-tight font-serif">早安，系統管理員</h1>
+        <p class="text-xs sm:text-sm text-gray-500">掌握門市每日排程、實質履約營收認列與庫存資產總覽</p>
       </div>
 
-      <div class="hidden lg:flex items-center gap-3 shrink-0">
-        <NuxtLink to="/Appointment" class="px-5 py-2.5 rounded-2xl bg-[#154337] text-white text-xs font-bold hover:bg-[#0e2f27] transition shadow-xs flex items-center gap-2 cursor-pointer active:scale-95">
-          <Icon name="mdi:calendar-plus" class="text-base" />
-          <span>查看預約清單</span>
+      <div class="flex items-center gap-2.5 flex-wrap shrink-0">
+        <NuxtLink 
+          to="/Appointment" 
+          class="px-4 py-2.5 rounded-xl bg-[#154337] text-white text-xs font-bold hover:bg-[#0e2f27] transition shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
+        >
+          <Icon name="mdi:calendar-check" class="text-base" />
+          <span>預約點收清單</span>
+        </NuxtLink>
+        <NuxtLink 
+          to="/finance" 
+          class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-50 transition shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+        >
+          <Icon name="mdi:chart-line" class="text-base text-[#154337]" />
+          <span>財務報表</span>
         </NuxtLink>
       </div>
     </div>
 
-    <!-- 雙欄 Layout (Density 7: 高效雙欄) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      
-      <!-- 左側：卡片夾互動區塊 (Variance 6 / Motion 5) -->
-      <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs flex flex-col items-center justify-center min-h-[380px] relative">
-        <div class="w-full flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
-          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">營運指標切換卡片</span>
-          <span class="text-xs text-[#154337] font-mono font-semibold">點擊卡片洗牌 &rarr;</span>
-        </div>
-
-        <div class="card-stack my-4" @click="nextCard">
-          <div 
-            v-for="(card, index) in cards" 
-            :key="card.id" 
-            class="stat-card border border-[#154337]/20 p-1 bg-[#154337]/5" 
-            :style="getCardStyle(index)"
-          >
-            <div class="card-inner bg-white rounded-[calc(1.25rem-0.25rem)] p-6 flex flex-col justify-between h-full shadow-xs">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-gray-500">{{ card.title }}</span>
-                <span :class="['px-2.5 py-0.5 rounded-full text-[10px] font-bold border', card.badgeColor]">
-                  {{ card.badge }}
-                </span>
-              </div>
-              
-              <div class="my-3">
-                <div v-if="isLoading" class="flex items-center gap-2 text-gray-400">
-                  <Icon name="mdi:loading" class="animate-spin text-2xl" />
-                  <span class="text-xs">數據計算中...</span>
-                </div>
-                <div v-else class="text-3xl font-extrabold text-[#154337] font-mono tracking-tight">
-                  {{ card.value }}
-                </div>
-              </div>
-              
-              <div class="text-xs text-gray-400 flex items-center justify-between border-t border-gray-100 pt-3">
-                <span>{{ card.sub }}</span>
-                <Icon name="mdi:chevron-right" class="text-base text-gray-300" />
-              </div>
+    <!-- 4 大核心營運指標網格 (4 欄高奢 Double-Bezel 卡片架構) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <!-- 1. 本月實質履約營收 -->
+      <div class="p-1 rounded-2xl bg-[#154337]/5 border border-[#154337]/10 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition duration-200 group">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">本月實質履約營收</span>
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 group-hover:scale-105 transition">
+              <Icon name="mdi:cash-check" class="text-xl" />
             </div>
           </div>
-        </div>
-
-        <div class="text-xs text-gray-400 mt-6 flex items-center gap-1.5 font-medium">
-          <Icon name="mdi:gesture-tap" class="animate-bounce text-[#154337] text-base" />
-          <span>點擊卡片體感洗牌切換指標</span>
+          <div>
+            <div v-if="isLoading" class="flex items-center gap-2 text-gray-400 py-1">
+              <Icon name="mdi:loading" class="animate-spin text-xl text-[#154337]" />
+              <span class="text-xs">計算中...</span>
+            </div>
+            <div v-else class="text-2xl sm:text-3xl font-black text-[#154337] font-mono tracking-tight">
+              NT$ {{ currentMonthRevenue.toLocaleString() }}
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">已扣除耗用與退款認列</p>
+          </div>
+          <div class="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold">
+            <NuxtLink to="/finance" class="text-[#154337] hover:underline inline-flex items-center gap-0.5">
+              <span>查看財務明細</span>
+              <Icon name="mdi:chevron-right" size="13" />
+            </NuxtLink>
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+              營收亮點
+            </span>
+          </div>
         </div>
       </div>
 
-      <!-- 右側：快捷操作面板 (Motion 5: hover translate physics) -->
-      <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-[#154337]/10 shadow-xs space-y-4">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h3 class="font-bold text-[#154337] text-base">門市快捷導覽功能</h3>
-          <span class="text-xs text-gray-400 font-mono">Quick Actions</span>
+      <!-- 2. 本月未完成預約 -->
+      <div class="p-1 rounded-2xl bg-purple-500/5 border border-purple-500/10 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition duration-200 group">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">本月未完成預約</span>
+            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200 group-hover:scale-105 transition">
+              <Icon name="mdi:calendar-clock" class="text-xl" />
+            </div>
+          </div>
+          <div>
+            <div v-if="isLoading" class="flex items-center gap-2 text-gray-400 py-1">
+              <Icon name="mdi:loading" class="animate-spin text-xl text-purple-600" />
+              <span class="text-xs">計算中...</span>
+            </div>
+            <div v-else class="text-2xl sm:text-3xl font-black text-purple-900 font-mono tracking-tight">
+              {{ pendingAppointmentsCount }} <span class="text-sm font-bold text-gray-500">組</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">本月內待服務與待點收</p>
+          </div>
+          <div class="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold">
+            <NuxtLink to="/Appointment" class="text-purple-700 hover:underline inline-flex items-center gap-0.5">
+              <span>處理預約排程</span>
+              <Icon name="mdi:chevron-right" size="13" />
+            </NuxtLink>
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-50 text-purple-700 border border-purple-200">
+              待排班服務
+            </span>
+          </div>
         </div>
+      </div>
 
-        <div class="space-y-3">
-          <NuxtLink 
-            to="/Appointment" 
-            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-[#154337] text-white flex items-center justify-center shadow-xs">
-                <Icon name="mdi:clipboard-text-clock-outline" class="text-xl" />
-              </div>
-              <div>
-                <div class="text-sm font-bold text-gray-900 group-hover:text-[#154337] transition">預約點收與簽到</div>
-                <div class="text-xs text-gray-400">處理到店顧客預約與課程扣堂</div>
-              </div>
+      <!-- 3. 本日新增預約筆數 -->
+      <div class="p-1 rounded-2xl bg-rose-500/5 border border-rose-500/10 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition duration-200 group">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">本日新增預約</span>
+            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200 group-hover:scale-105 transition">
+              <Icon name="mdi:calendar-today" class="text-xl" />
             </div>
-            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-[#154337] flex items-center justify-center text-gray-400 group-hover:text-[#154337] transition">
-              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
+          </div>
+          <div>
+            <div v-if="isLoading" class="flex items-center gap-2 text-gray-400 py-1">
+              <Icon name="mdi:loading" class="animate-spin text-xl text-rose-600" />
+              <span class="text-xs">計算中...</span>
             </div>
-          </NuxtLink>
+            <div v-else class="text-2xl sm:text-3xl font-black text-rose-800 font-mono tracking-tight">
+              {{ todayAppointmentsCount }} <span class="text-sm font-bold text-gray-500">筆</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">今日門市新增預約筆數</p>
+          </div>
+          <div class="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold">
+            <NuxtLink to="/calendar" class="text-rose-700 hover:underline inline-flex items-center gap-0.5">
+              <span>瀏覽今日行事曆</span>
+              <Icon name="mdi:chevron-right" size="13" />
+            </NuxtLink>
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-rose-50 text-rose-700 border border-rose-200">
+              今日動態
+            </span>
+          </div>
+        </div>
+      </div>
 
-          <NuxtLink 
-            to="/settings" 
-            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
-                <Icon name="mdi:account-group-outline" class="text-xl" />
-              </div>
-              <div>
-                <div class="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition">美容師團隊管理</div>
-                <div class="text-xs text-gray-400">新增、編輯或維護駐店美容師清單</div>
-              </div>
+      <!-- 4. 產品庫存總成本價值 -->
+      <div class="p-1 rounded-2xl bg-amber-500/5 border border-amber-500/10 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition duration-200 group">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-500">產品庫存成本總值</span>
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:scale-105 transition">
+              <Icon name="mdi:package-variant-closed" class="text-xl" />
             </div>
-            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-purple-600 flex items-center justify-center text-gray-400 group-hover:text-purple-600 transition">
-              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
+          </div>
+          <div>
+            <div v-if="isLoading" class="flex items-center gap-2 text-gray-400 py-1">
+              <Icon name="mdi:loading" class="animate-spin text-xl text-amber-600" />
+              <span class="text-xs">計算中...</span>
             </div>
-          </NuxtLink>
+            <div v-else class="text-2xl sm:text-3xl font-black text-amber-900 font-mono tracking-tight">
+              NT$ {{ totalInventoryValue.toLocaleString() }}
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">現有商品庫存資產總額</p>
+          </div>
+          <div class="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold">
+            <NuxtLink to="/products" class="text-amber-800 hover:underline inline-flex items-center gap-0.5">
+              <span>管理庫存商品</span>
+              <Icon name="mdi:chevron-right" size="13" />
+            </NuxtLink>
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+              資產庫存
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 營運摘要與重點指南卡片 (寬幅尊榮設計) -->
+    <div class="p-1 rounded-3xl bg-[#154337]/5 border border-[#154337]/10 shadow-xs">
+      <div class="bg-white rounded-[calc(1.5rem-2px)] p-5 sm:p-7 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-[#154337]/10 flex items-center justify-center text-[#154337] shrink-0">
+              <Icon name="mdi:chart-timeline-variant-shimmer" class="text-xl" />
+            </div>
+            <div>
+              <h2 class="text-base sm:text-lg font-bold text-[#154337]">系統營運與會計原則重點提示</h2>
+              <p class="text-xs text-gray-500">門市營收認列與庫存盤點管理規範</p>
+            </div>
+          </div>
 
           <NuxtLink 
             to="/analytics" 
-            class="flex items-center justify-between p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 hover:border-[#154337]/40 hover:bg-white hover:-translate-y-0.5 transition duration-200 group cursor-pointer"
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#154337] hover:underline"
           >
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                <Icon name="mdi:chart-timeline-variant-shimmer" class="text-xl" />
-              </div>
-              <div>
-                <div class="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition">數據洞察與營收報告</div>
-                <div class="text-xs text-gray-400">檢視實質履約營收與現金流量報告</div>
-              </div>
-            </div>
-            <div class="w-7 h-7 rounded-full bg-white border border-gray-200 group-hover:border-emerald-600 flex items-center justify-center text-gray-400 group-hover:text-emerald-600 transition">
-              <Icon name="mdi:arrow-right" class="text-sm group-hover:translate-x-0.5 transition" />
-            </div>
+            <span>前往數據洞察報告</span>
+            <Icon name="mdi:arrow-right" class="text-sm" />
           </NuxtLink>
         </div>
-      </div>
 
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 space-y-2">
+            <div class="flex items-center gap-2 text-xs font-bold text-gray-900">
+              <Icon name="mdi:cash-multiple" class="text-emerald-700 text-base" />
+              <span>實質履約營收認列</span>
+            </div>
+            <p class="text-[11px] text-gray-600 leading-relaxed">
+              顧客購買包套時列入現金流收入，直到顧客到店實際扣堂消費或購買產品時，系統才正式認列為門市營收。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 space-y-2">
+            <div class="flex items-center gap-2 text-xs font-bold text-gray-900">
+              <Icon name="mdi:account-clock" class="text-purple-700 text-base" />
+              <span>預約與扣堂點收</span>
+            </div>
+            <p class="text-[11px] text-gray-600 leading-relaxed">
+              在預約點收頁面確認完成服務後，系統將自動核銷顧客包套並產生異動履歷，確保會員堂數即時同步。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10 space-y-2">
+            <div class="flex items-center gap-2 text-xs font-bold text-gray-900">
+              <Icon name="mdi:package-variant-closed-check" class="text-amber-700 text-base" />
+              <span>進銷存庫存防護</span>
+            </div>
+            <p class="text-[11px] text-gray-600 leading-relaxed">
+              所有產品進出庫皆有完整審計履歷，盤點調整不影響財務帳目，且庫存扣減受到防負數嚴格檢驗。
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
+
   </div>
 </template>
-
-<style scoped>
-.card-stack {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  height: 200px;
-  cursor: pointer;
-  perspective: 1000px;
-  user-select: none;
-}
-
-.stat-card {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  border-radius: 20px;
-}
-</style>

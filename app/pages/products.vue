@@ -461,19 +461,19 @@ onMounted(() => { fetchProducts() })
         <div class="relative flex-1 max-w-full sm:max-w-md">
           <Icon 
             name="mdi:magnify" 
-            class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base" 
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base z-10" 
           />
           <input 
             type="text" 
             v-model="productSearchText" 
             placeholder="搜尋產品名稱或編號..." 
-            class="w-full pl-9.5 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
+            class="w-full pl-10 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
           />
           <button 
             v-if="productSearchText" 
             @click="productSearchText = ''" 
             type="button"
-            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer z-10"
             title="清除搜尋"
           >
             <Icon name="mdi:close" size="14" />
@@ -650,19 +650,19 @@ onMounted(() => { fetchProducts() })
           <div class="relative flex-1 min-w-[180px]">
             <Icon 
               name="mdi:magnify" 
-              class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base" 
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-base z-10" 
             />
             <input 
               type="text" 
               v-model="transactionSearchText" 
               placeholder="搜尋產品名稱或備註說明..." 
-              class="w-full pl-9.5 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
+              class="w-full pl-10 pr-8 py-2 bg-gray-50/70 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-[#154337] rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-[#154337]/20 outline-none transition"
             />
             <button 
               v-if="transactionSearchText" 
               @click="transactionSearchText = ''" 
               type="button"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition cursor-pointer z-10"
               title="清除關鍵字"
             >
               <Icon name="mdi:close" size="14" />

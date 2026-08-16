@@ -204,18 +204,24 @@ onMounted(() => fetchFinancialData())
 
 <template>
   <div class="space-y-4 sm:space-y-6">
-    <!-- 頂部列：抬頭與快速日期控制區 -->
+    <!-- 頂部列：抬頭與快速日期控制區 (Double-Bezel 7/5/8 高奢與跨端適配) -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-xs">
       <div>
-        <h1 class="text-xl sm:text-2xl font-black text-[#154337] tracking-tight">財務與營收管理</h1>
-        <p class="text-xs text-gray-500 mt-1">追蹤店內實際現金流與到店履約營收認列</p>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
+            Accounting & Revenue
+          </span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black text-[#154337] tracking-tight font-serif">財務與營收管理</h1>
+        <p class="text-xs text-gray-500 mt-0.5">追蹤門市每日實際現金流與到店履約營收認列</p>
       </div>
       
-      <!-- 日期篩選與按鈕區 (針對手機版優化) -->
+      <!-- 日期篩選與按鈕區 (針對手機版與桌面版進行響應式排列) -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
         
         <!-- 日期範圍選擇與月份快選按鈕組 -->
-        <div class="flex flex-wrap items-center gap-2 bg-[#FAF4EE]/60 p-2 rounded-2xl border border-[#154337]/10">
+        <div class="flex flex-wrap items-center gap-2 bg-[#FAF4EE]/70 p-2 rounded-2xl border border-[#154337]/10">
           <ClientOnly>
             <div class="flex items-center gap-1.5 flex-1 min-w-[210px]">
               <div class="flex-1">
@@ -233,13 +239,13 @@ onMounted(() => fetchFinancialData())
             </div>
           </ClientOnly>
 
-          <div class="hidden sm:block w-px h-6 bg-gray-200 mx-0.5"></div>
+          <div class="hidden sm:block w-px h-6 bg-[#154337]/15 mx-0.5"></div>
 
           <!-- 🌟 上個月 / 本月 / 下個月 快速切換按鈕群 -->
-          <div class="flex items-center gap-1 w-full sm:w-auto justify-between sm:justify-start pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-200/60">
+          <div class="flex items-center gap-1 w-full sm:w-auto justify-between sm:justify-start pt-1 sm:pt-0 border-t sm:border-t-0 border-[#154337]/10">
             <button 
               @click="setPrevMonth" 
-              class="flex-1 sm:flex-initial px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#154337] hover:border-[#154337] rounded-xl text-xs font-bold transition shadow-2xs hover:bg-[#FAF4EE] flex items-center justify-center gap-0.5 active:scale-95"
+              class="flex-1 sm:flex-initial px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#154337] hover:border-[#154337] rounded-xl text-xs font-bold transition shadow-2xs hover:bg-[#FAF4EE] flex items-center justify-center gap-0.5 active:scale-95 cursor-pointer"
               title="切換至上個月日期範圍"
             >
               <Icon name="mdi:chevron-left" class="text-sm" />
@@ -248,7 +254,7 @@ onMounted(() => fetchFinancialData())
 
             <button 
               @click="setThisMonth" 
-              class="flex-1 sm:flex-initial px-3 py-1.5 bg-[#154337] text-white rounded-xl text-xs font-bold hover:bg-[#0e2f27] transition shadow-2xs flex items-center justify-center active:scale-95"
+              class="flex-1 sm:flex-initial px-3 py-1.5 bg-[#154337] text-white rounded-xl text-xs font-bold hover:bg-[#0e2f27] transition shadow-2xs flex items-center justify-center active:scale-95 cursor-pointer"
               title="快速重置為本月起訖日期"
             >
               本月
@@ -256,7 +262,7 @@ onMounted(() => fetchFinancialData())
 
             <button 
               @click="setNextMonth" 
-              class="flex-1 sm:flex-initial px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#154337] hover:border-[#154337] rounded-xl text-xs font-bold transition shadow-2xs hover:bg-[#FAF4EE] flex items-center justify-center gap-0.5 active:scale-95"
+              class="flex-1 sm:flex-initial px-2.5 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#154337] hover:border-[#154337] rounded-xl text-xs font-bold transition shadow-2xs hover:bg-[#FAF4EE] flex items-center justify-center gap-0.5 active:scale-95 cursor-pointer"
               title="切換至下個月日期範圍"
             >
               <span>下個月</span>
@@ -276,29 +282,68 @@ onMounted(() => fetchFinancialData())
       </div>
     </div>
 
-    <!-- KPI 數據指標卡片 (手機端 2 欄，平板 3 欄，電腦 5 欄) -->
+    <!-- KPI 數據指標卡片 (手機端 2 欄，平板 3 欄，電腦 5 欄 Double-Bezel 升級) -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
-      <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <span class="text-[11px] sm:text-xs font-bold text-gray-400 block">現金總收入</span>
-        <span class="text-lg sm:text-2xl font-black text-emerald-600 mt-1 block font-mono">${{ summary.total_income.toLocaleString() }}</span>
+      <div class="p-1 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-3.5 sm:p-4 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] sm:text-xs font-bold text-gray-400">現金總收入</span>
+            <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+              <Icon name="mdi:arrow-down-bold" class="text-xs" />
+            </div>
+          </div>
+          <span class="text-lg sm:text-2xl font-black text-emerald-600 mt-2 block font-mono tracking-tight">${{ summary.total_income.toLocaleString() }}</span>
+        </div>
       </div>
-      <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <span class="text-[11px] sm:text-xs font-bold text-gray-400 block">現金總支出</span>
-        <span class="text-lg sm:text-2xl font-black text-rose-500 mt-1 block font-mono">${{ summary.total_expense.toLocaleString() }}</span>
+
+      <div class="p-1 rounded-2xl bg-rose-500/5 border border-rose-500/10 shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-3.5 sm:p-4 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] sm:text-xs font-bold text-gray-400">現金總支出</span>
+            <div class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-200">
+              <Icon name="mdi:arrow-up-bold" class="text-xs" />
+            </div>
+          </div>
+          <span class="text-lg sm:text-2xl font-black text-rose-500 mt-2 block font-mono tracking-tight">${{ summary.total_expense.toLocaleString() }}</span>
+        </div>
       </div>
-      <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <span class="text-[11px] sm:text-xs font-bold text-gray-400 block">淨現金流 (淨額)</span>
-        <span :class="['text-lg sm:text-2xl font-black mt-1 block font-mono', summary.net_cash_flow >= 0 ? 'text-gray-800' : 'text-rose-600']">
-          ${{ summary.net_cash_flow.toLocaleString() }}
-        </span>
+
+      <div class="p-1 rounded-2xl bg-gray-500/5 border border-gray-500/10 shadow-xs hover:-translate-y-0.5 transition duration-200">
+        <div class="bg-white rounded-[calc(1rem-2px)] p-3.5 sm:p-4 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] sm:text-xs font-bold text-gray-400">淨現金流 (淨額)</span>
+            <div class="w-6 h-6 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center border border-gray-200">
+              <Icon name="mdi:swap-horizontal" class="text-xs" />
+            </div>
+          </div>
+          <span :class="['text-lg sm:text-2xl font-black mt-2 block font-mono tracking-tight', summary.net_cash_flow >= 0 ? 'text-gray-900' : 'text-rose-600']">
+            ${{ summary.net_cash_flow.toLocaleString() }}
+          </span>
+        </div>
       </div>
-      <div class="bg-[#154337] text-white p-3.5 sm:p-4 rounded-2xl shadow-sm col-span-2 sm:col-span-1">
-        <span class="text-[11px] sm:text-xs font-bold text-emerald-200 block">實質履約總營收</span>
-        <span class="text-lg sm:text-2xl font-black mt-1 block font-mono">${{ summary.total_recognized_revenue.toLocaleString() }}</span>
+
+      <div class="p-1 rounded-2xl bg-[#154337]/10 border border-[#154337]/20 shadow-xs hover:-translate-y-0.5 transition duration-200 col-span-2 sm:col-span-1">
+        <div class="bg-[#154337] text-white rounded-[calc(1rem-2px)] p-3.5 sm:p-4 h-full flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] sm:text-xs font-bold text-emerald-200">實質履約總營收</span>
+            <div class="w-6 h-6 rounded-lg bg-white/20 text-white flex items-center justify-center">
+              <Icon name="mdi:cash-check" class="text-xs" />
+            </div>
+          </div>
+          <span class="text-lg sm:text-2xl font-black mt-2 block font-mono tracking-tight">${{ summary.total_recognized_revenue.toLocaleString() }}</span>
+        </div>
       </div>
-      <div class="bg-amber-50/80 p-3.5 sm:p-4 rounded-2xl border border-amber-200/80 shadow-2xs col-span-2 sm:col-span-1">
-        <span class="text-[11px] sm:text-xs font-bold text-amber-700 block">預估履約成本</span>
-        <span class="text-lg sm:text-2xl font-black text-amber-600 mt-1 block font-mono">${{ summary.estimated_cost.toLocaleString() }}</span>
+
+      <div class="p-1 rounded-2xl bg-amber-500/5 border border-amber-500/10 shadow-xs hover:-translate-y-0.5 transition duration-200 col-span-2 sm:col-span-1">
+        <div class="bg-amber-50/80 rounded-[calc(1rem-2px)] p-3.5 sm:p-4 h-full flex flex-col justify-between border border-amber-200/80">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] sm:text-xs font-bold text-amber-800">預估履約成本</span>
+            <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center border border-amber-300">
+              <Icon name="mdi:tag-outline" class="text-xs" />
+            </div>
+          </div>
+          <span class="text-lg sm:text-2xl font-black text-amber-700 mt-2 block font-mono tracking-tight">${{ summary.estimated_cost.toLocaleString() }}</span>
+        </div>
       </div>
     </div>
 
@@ -307,15 +352,17 @@ onMounted(() => fetchFinancialData())
       <div class="flex border-b border-gray-100 pb-3 mb-4 gap-3 sm:gap-6 overflow-x-auto">
         <button 
           @click="currentTab = 'cash_flow'" 
-          :class="['font-bold text-xs sm:text-sm pb-2 border-b-2 transition whitespace-nowrap cursor-pointer', currentTab === 'cash_flow' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+          :class="['font-bold text-xs sm:text-sm pb-2 border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5', currentTab === 'cash_flow' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
         >
-          💵 現金流明細 ({{ cashList.length }})
+          <Icon name="mdi:cash-multiple" size="16" />
+          <span>現金流明細 ({{ cashList.length }})</span>
         </button>
         <button 
           @click="currentTab = 'revenue'" 
-          :class="['font-bold text-xs sm:text-sm pb-2 border-b-2 transition whitespace-nowrap cursor-pointer', currentTab === 'revenue' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
+          :class="['font-bold text-xs sm:text-sm pb-2 border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5', currentTab === 'revenue' ? 'border-[#154337] text-[#154337]' : 'border-transparent text-gray-400 hover:text-gray-600']"
         >
-          📈 實質營收認列紀錄 ({{ revenueList.length }})
+          <Icon name="mdi:chart-timeline-variant" size="16" />
+          <span>實質營收認列紀錄 ({{ revenueList.length }})</span>
         </button>
       </div>
 
@@ -333,7 +380,7 @@ onMounted(() => fetchFinancialData())
           <div 
             v-for="item in cashList" 
             :key="item.id" 
-            class="p-3 sm:p-4 bg-gray-50/70 hover:bg-gray-100/80 rounded-2xl border border-gray-100 transition space-y-2"
+            class="p-3.5 sm:p-4 bg-gray-50/70 hover:bg-gray-100/80 rounded-2xl border border-gray-100 transition space-y-2"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-2 flex-wrap">
@@ -349,24 +396,28 @@ onMounted(() => fetchFinancialData())
               </span>
             </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-gray-200/50 text-xs text-gray-500">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-200/50 text-xs text-gray-500">
               <p class="truncate text-[11px] sm:text-xs">
                 {{ item.description || '無備註說明' }} • <span class="font-mono text-gray-400">{{ item.date }}</span>
               </p>
               
-              <!-- 編輯與刪除操作按鈕 -->
-              <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <!-- 編輯與刪除規格化操作按鈕 -->
+              <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                 <button 
                   @click="openEditCashModal(item)" 
-                  class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-bold text-xs transition shadow-2xs"
+                  class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 hover:border-gray-300 transition shadow-2xs cursor-pointer active:scale-95"
+                  title="編輯收支"
                 >
-                  編輯
+                  <Icon name="mdi:pencil-outline" size="13" />
+                  <span>編輯</span>
                 </button>
                 <button 
                   @click="handleDeleteCashTransaction(item)" 
-                  class="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-100 font-bold text-xs transition shadow-2xs"
+                  class="h-7.5 inline-flex items-center justify-center gap-1 px-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition shadow-2xs cursor-pointer active:scale-95"
+                  title="刪除收支"
                 >
-                  刪除
+                  <Icon name="mdi:trash-can-outline" size="13" />
+                  <span>刪除</span>
                 </button>
               </div>
             </div>
@@ -382,7 +433,7 @@ onMounted(() => fetchFinancialData())
           <div 
             v-for="item in revenueList" 
             :key="item.id" 
-            class="p-3 sm:p-4 bg-gray-50/70 hover:bg-gray-100/80 rounded-2xl border border-gray-100 transition flex items-center justify-between gap-3"
+            class="p-3.5 sm:p-4 bg-gray-50/70 hover:bg-gray-100/80 rounded-2xl border border-gray-100 transition flex items-center justify-between gap-3"
           >
             <div class="space-y-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">

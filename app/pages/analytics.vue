@@ -126,7 +126,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto space-y-6 pb-12">
+  <div class="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-12">
     
     <!-- 1. 頂部抬頭與日期選擇器 (Double-Bezel 7/5/8 高奢與跨端適配) -->
     <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
@@ -134,11 +134,11 @@ onMounted(() => {
         <div>
           <div class="flex items-center gap-2 mb-1">
             <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
-              Business Intelligence
+              Business Intelligence & Analytics
             </span>
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#154337] tracking-tight font-serif">
+          <h1 class="text-2xl sm:text-3xl font-black text-[#154337] tracking-tight font-serif">
             數據洞察與營運分析報告
           </h1>
           <p class="text-gray-500 text-xs sm:text-sm mt-0.5">
@@ -153,8 +153,8 @@ onMounted(() => {
             <button 
               @click="setPresetRange('month')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
-                selectedPreset === 'month' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center active:scale-95',
+                selectedPreset === 'month' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337] hover:bg-white'
               ]"
             >
               本月
@@ -162,8 +162,8 @@ onMounted(() => {
             <button 
               @click="setPresetRange('quarter')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
-                selectedPreset === 'quarter' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center active:scale-95',
+                selectedPreset === 'quarter' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337] hover:bg-white'
               ]"
             >
               本季
@@ -171,8 +171,8 @@ onMounted(() => {
             <button 
               @click="setPresetRange('year')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center',
-                selectedPreset === 'year' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337]'
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer text-center active:scale-95',
+                selectedPreset === 'year' ? 'bg-[#154337] text-white shadow-xs' : 'text-gray-600 hover:text-[#154337] hover:bg-white'
               ]"
             >
               本年度
@@ -204,11 +204,11 @@ onMounted(() => {
     <!-- 2. 4 大核心 KPI 統計卡片 (Double-Bezel 7/5/8 高視覺密度) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- 總認列營收 -->
-      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+      <div class="p-1 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200 group">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-gray-500">當期實質履約營收</span>
-            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 group-hover:scale-105 transition">
               <Icon name="mdi:cash-check" class="text-xl" />
             </div>
           </div>
@@ -222,11 +222,11 @@ onMounted(() => {
       </div>
 
       <!-- 現金淨流入 -->
-      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+      <div class="p-1 bg-blue-500/5 border border-blue-500/15 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200 group">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-gray-500">當期現金淨流入 (Net Cash)</span>
-            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-200">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-200 group-hover:scale-105 transition">
               <Icon name="mdi:swap-horizontal" class="text-xl" />
             </div>
           </div>
@@ -244,11 +244,11 @@ onMounted(() => {
       </div>
 
       <!-- 預約完成率 -->
-      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+      <div class="p-1 bg-purple-500/5 border border-purple-500/15 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200 group">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-gray-500">預約履約完成率</span>
-            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
+            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200 group-hover:scale-105 transition">
               <Icon name="mdi:calendar-check-outline" class="text-xl" />
             </div>
           </div>
@@ -262,11 +262,11 @@ onMounted(() => {
       </div>
 
       <!-- 庫存資產總值 -->
-      <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200">
+      <div class="p-1 bg-amber-500/5 border border-amber-500/15 rounded-2xl md:rounded-3xl shadow-xs hover:-translate-y-0.5 transition duration-200 group">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-5 h-full flex flex-col justify-between">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-gray-500">當前商品庫存成本價值</span>
-            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:scale-105 transition">
               <Icon name="mdi:package-variant" class="text-xl" />
             </div>
           </div>
@@ -281,7 +281,7 @@ onMounted(() => {
     </div>
 
     <!-- 3. 雙欄分析圖表區 (Double-Bezel 響應式雙欄) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
       <!-- 營收結構拆解 -->
       <div class="p-1 bg-[#154337]/5 border border-[#154337]/10 rounded-2xl md:rounded-3xl shadow-xs">
         <div class="bg-white rounded-[calc(1rem-2px)] md:rounded-[calc(1.5rem-2px)] p-4 sm:p-6 space-y-5">
@@ -294,7 +294,7 @@ onMounted(() => {
           </div>
 
           <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
-            <Icon name="mdi:loading" class="animate-spin text-2xl" />
+            <Icon name="mdi:loading" class="animate-spin text-2xl text-[#154337]" />
           </div>
 
           <div v-else class="space-y-4">
@@ -334,15 +334,15 @@ onMounted(() => {
 
             <!-- 佔比分析格 -->
             <div class="pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 sm:gap-4 text-center">
-              <div class="p-3 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10">
+              <div class="p-3.5 rounded-2xl bg-[#FAF4EE]/70 border border-[#154337]/10">
                 <div class="text-[11px] text-gray-500 font-bold">課程佔比</div>
-                <div class="text-lg font-black text-[#154337] font-mono mt-0.5">
+                <div class="text-lg sm:text-xl font-black text-[#154337] font-mono mt-0.5">
                   {{ totalRecognizedRevenue > 0 ? Math.round((courseRevenue / totalRecognizedRevenue) * 100) : 0 }}%
                 </div>
               </div>
-              <div class="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+              <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
                 <div class="text-[11px] text-emerald-800 font-bold">產品佔比</div>
-                <div class="text-lg font-black text-emerald-700 font-mono mt-0.5">
+                <div class="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-0.5">
                   {{ totalRecognizedRevenue > 0 ? Math.round((productRevenue / totalRecognizedRevenue) * 100) : 0 }}%
                 </div>
               </div>
@@ -363,30 +363,30 @@ onMounted(() => {
           </div>
 
           <div v-if="isLoading" class="h-40 flex items-center justify-center text-gray-400 animate-pulse">
-            <Icon name="mdi:loading" class="animate-spin text-2xl" />
+            <Icon name="mdi:loading" class="animate-spin text-2xl text-[#154337]" />
           </div>
 
           <div v-else class="space-y-4">
             <!-- 收入項目 -->
-            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-1.5">
               <div class="flex justify-between items-center text-xs sm:text-sm font-bold text-emerald-900">
                 <span class="flex items-center gap-1.5">
                   <Icon name="mdi:arrow-down-bold-circle" class="text-lg text-emerald-600" />
                   現金總收入
                 </span>
-                <span class="font-mono text-base font-black">NT$ {{ totalIncome.toLocaleString() }}</span>
+                <span class="font-mono text-base sm:text-lg font-black">NT$ {{ totalIncome.toLocaleString() }}</span>
               </div>
               <p class="text-[11px] text-emerald-700">包含門市現場現金、LINE Pay、刷卡與匯款之當期實際入帳</p>
             </div>
 
             <!-- 支出項目 -->
-            <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">
+            <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-1.5">
               <div class="flex justify-between items-center text-xs sm:text-sm font-bold text-rose-900">
                 <span class="flex items-center gap-1.5">
                   <Icon name="mdi:arrow-up-bold-circle" class="text-lg text-rose-600" />
                   現金總支出
                 </span>
-                <span class="font-mono text-base font-black">NT$ {{ totalExpense.toLocaleString() }}</span>
+                <span class="font-mono text-base sm:text-lg font-black">NT$ {{ totalExpense.toLocaleString() }}</span>
               </div>
               <p class="text-[11px] text-rose-700">包含店面租金、進貨成本、水電雜支與人員行政提撥</p>
             </div>
