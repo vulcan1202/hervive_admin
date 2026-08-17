@@ -19,6 +19,7 @@ const showQuestionnaireModal = ref(false)
 const showTermsModal = ref(false)
 const tempAgreedInModal = ref(false)
 const showNoteModal = ref(false)
+const showFulfillmentModal = ref(false)
 
 // ==========================================
 // 3. 通用輔助函式
@@ -90,7 +91,7 @@ const updateAppointmentBeautician = async (apptId: number, beauticianId: any) =>
 
 const revertAppointmentStatus = async (id: number) => {
   const currentAppt = appointments.value.find(a => a.id === id)
-  if (!confirm(`確定要將預約單號「${currentAppt?.appointment_code || id}」反向還原為「已確認 (待履約)」狀態嗎？`)) {
+  if (!confirm(`確定要將預約單號「${currentAppt?.appointment_code || id}」反向還原為「已確認 (待履約)」狀態嗎？\n（此操作將自動復原扣減的包套堂數與產品庫存）`)) {
     return
   }
 
@@ -241,7 +242,237 @@ const todayCompletedCount = computed(() => {
 })
 
 // ==========================================
-// 8. 客戶詳情與問卷管理模組
+// 8. 核心功能：修改課程與產品銷售 (Fulfillment & Sales Management)
+// ==========================================
+const selectedApptForFulfillment = ref<any>(null)
+const loadingFulfillment = ref(false)
+const savingFulfillment = ref(false)
+
+const clientActivePackages = ref<any[]>([])
+const availableCoursesList = ref<any[]>([])
+const availableProductsList = ref<any[]>([])
+
+// 扣除現有包堂 (key: user_course_id, value: use_count)
+const selectedCoursesToDeduct = reactive<Record<number, number>>({})
+
+// 現場加購包套/課程
+const newCoursesToBuy = ref<{
+  course_id: number | string;
+  buy_amount: number;
+  use_count: number;
+  payment_method: string;
+  custom_total_price?: number;
+}[]>([])
+
+// 現場產品銷售
+const productsToSell = ref<{
+  product_id: number | string;
+  quantity: number;
+  payment_method: string;
+  custom_unit_price?: number;
+}[]>([])
+
+const openFulfillmentModal = async (appt: any) => {
+  selectedApptForFulfillment.value = appt
+  showFulfillmentModal.value = true
+  loadingFulfillment.value = true
+  
+  // 重設表單
+  for (const key in selectedCoursesToDeduct) delete selectedCoursesToDeduct[key]
+  newCoursesToBuy.value = []
+  productsToSell.value = []
+
+  try {
+    const [pkgRes, courseRes, prodRes, detailRes] = await Promise.all([
+      fetch(`${backendUrl}/api/users-courses?user_id=${appt.user_id}&has_remaining=true`),
+      fetch(`${backendUrl}/api/courses`),
+      fetch(`${backendUrl}/api/products`),
+      fetch(`${backendUrl}/api/appointments/fulfillment?appointment_id=${appt.id}`)
+    ])
+    
+    if (pkgRes.ok) {
+      const pkgData = await pkgRes.json()
+      clientActivePackages.value = pkgData.data || []
+    }
+    
+    if (courseRes.ok) {
+      const courseData = await courseRes.json()
+      availableCoursesList.value = courseData.data || []
+    }
+
+    if (prodRes.ok) {
+      const prodData = await prodRes.json()
+      availableProductsList.value = prodData.data || []
+    }
+
+    if (detailRes.ok) {
+      const detailData = (await detailRes.json()).data || {}
+      
+      // 1. 回填現有包堂扣除
+      if (detailData.courses_used && Array.isArray(detailData.courses_used)) {
+        for (const cu of detailData.courses_used) {
+          selectedCoursesToDeduct[cu.user_course_id] = cu.use_count || 1
+        }
+      }
+
+      // 2. 回填現場加購課程 (若有)
+      if (detailData.new_courses_bought && Array.isArray(detailData.new_courses_bought)) {
+        // 從 cash_transactions 解析
+        for (const cb of detailData.new_courses_bought) {
+          // 例如 description: 現場購買「XXX」共 1 堂 (預約#123)
+          newCoursesToBuy.value.push({
+            course_id: '',
+            buy_amount: 1,
+            use_count: 1,
+            payment_method: cb.payment_method || 'Cash',
+            custom_total_price: cb.amount || undefined
+          })
+        }
+      }
+
+      // 3. 回填現場銷售產品
+      if (detailData.products_sold && Array.isArray(detailData.products_sold)) {
+        for (const ps of detailData.products_sold) {
+          productsToSell.value.push({
+            product_id: ps.product_id,
+            quantity: ps.quantity || 1,
+            payment_method: ps.payment_method || 'Cash',
+            custom_unit_price: ps.unit_price || ps.selling_price || 0
+          })
+        }
+      }
+    }
+  } catch (err) {
+    console.error("撈取履約明細失敗", err)
+  } finally {
+    loadingFulfillment.value = false
+  }
+}
+
+const toggleCourseSelection = (userCourseId: number) => {
+  if (selectedCoursesToDeduct[userCourseId] !== undefined) {
+    delete selectedCoursesToDeduct[userCourseId]
+  } else {
+    selectedCoursesToDeduct[userCourseId] = 1
+  }
+}
+
+const addNewCoursePurchase = () => {
+  newCoursesToBuy.value.push({
+    course_id: '',
+    buy_amount: 1,
+    use_count: 1,
+    payment_method: 'Cash',
+    custom_total_price: undefined
+  })
+}
+
+const removeNewCoursePurchase = (index: number) => {
+  newCoursesToBuy.value.splice(index, 1)
+}
+
+const onNewCourseChange = (item: any) => {
+  const c = availableCoursesList.value.find(crs => crs.id === Number(item.course_id))
+  if (c && typeof c.price === 'number') {
+    item.custom_total_price = c.price * (item.buy_amount || 1)
+  }
+}
+
+const addProductSale = () => {
+  productsToSell.value.push({
+    product_id: '',
+    quantity: 1,
+    payment_method: 'Cash',
+    custom_unit_price: undefined
+  })
+}
+
+const removeProductSale = (index: number) => {
+  productsToSell.value.splice(index, 1)
+}
+
+const onProductSaleChange = (item: any) => {
+  const p = availableProductsList.value.find(prod => prod.id === Number(item.product_id))
+  if (p && typeof p.selling_price === 'number') {
+    item.custom_unit_price = p.selling_price
+  }
+}
+
+// 實時計算銷售總金額
+const totalProductsAmount = computed(() => {
+  return productsToSell.value.reduce((sum, p) => {
+    if (!p.product_id) return sum
+    const prod = availableProductsList.value.find(item => item.id === Number(p.product_id))
+    const price = typeof p.custom_unit_price === 'number' ? p.custom_unit_price : (prod?.selling_price || 0)
+    return sum + (price * (p.quantity || 1))
+  }, 0)
+})
+
+const totalNewCoursesAmount = computed(() => {
+  return newCoursesToBuy.value.reduce((sum, c) => {
+    if (!c.course_id && c.custom_total_price === undefined) return sum
+    const crs = availableCoursesList.value.find(item => item.id === Number(c.course_id))
+    const price = typeof c.custom_total_price === 'number' ? c.custom_total_price : ((crs?.price || 0) * (c.buy_amount || 1))
+    return sum + price
+  }, 0)
+})
+
+const submitUpdateFulfillment = async () => {
+  if (!selectedApptForFulfillment.value) return
+
+  savingFulfillment.value = true
+  try {
+    const courses_used = Object.entries(selectedCoursesToDeduct).map(([id, count]) => ({
+      user_course_id: Number(id),
+      use_count: Number(count)
+    }))
+
+    const new_courses_bought = newCoursesToBuy.value
+      .filter(c => c.course_id !== '' || c.custom_total_price !== undefined)
+      .map(c => ({
+        course_id: Number(c.course_id),
+        buy_amount: Number(c.buy_amount),
+        use_count: Number(c.use_count),
+        payment_method: c.payment_method,
+        custom_total_price: c.custom_total_price !== undefined && c.custom_total_price !== null ? Number(c.custom_total_price) : undefined
+      }))
+
+    const products_sold = productsToSell.value
+      .filter(p => p.product_id !== '')
+      .map(p => ({
+        product_id: Number(p.product_id),
+        quantity: Number(p.quantity),
+        payment_method: p.payment_method,
+        custom_unit_price: p.custom_unit_price !== undefined && p.custom_unit_price !== null ? Number(p.custom_unit_price) : undefined
+      }))
+
+    const res = await fetch(`${backendUrl}/api/appointments/fulfillment`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appointment_id: selectedApptForFulfillment.value.id,
+        courses_used,
+        new_courses_bought,
+        products_sold,
+        date: selectedApptForFulfillment.value.date
+      })
+    })
+
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.error || '更新履約明細失敗')
+
+    alert('✅ 已成功更新該筆預約的履約課程與產品銷售明細！')
+    showFulfillmentModal.value = false
+    await fetchAllCompletedAppointments()
+  } catch (err: any) {
+    alert(err.message || '操作失敗，請稍後再試')
+  } finally {
+    savingFulfillment.value = false
+  }
+}
+
+// ==========================================
+// 9. 客戶詳情與問卷管理模組
 // ==========================================
 const selectedClient = ref<any>(null)
 const questionnaireData = ref<any>(null)
@@ -376,7 +607,7 @@ const saveQuestionnaire = async () => {
 }
 
 // ==========================================
-// 9. 備註管理模組
+// 10. 備註管理模組
 // ==========================================
 const editingNoteAppt = ref<any>(null)
 const noteInput = ref('')
@@ -438,7 +669,7 @@ onMounted(() => {
         <div>
           <div class="flex items-center gap-2 mb-1">
             <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
-              Fulfilled Records
+              Fulfilled Records & Settlement
             </span>
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           </div>
@@ -447,7 +678,7 @@ onMounted(() => {
             已完成預約管理專區
           </h1>
           <p class="text-gray-500 text-xs sm:text-sm mt-0.5">
-            完整檢視歷史到店履約紀錄、服務美容師、單據備註與顧客初填問卷
+            檢視到店履約紀錄、彈性修改/增刪課程履約與現場產品銷售、查看顧客資料與問卷
           </p>
         </div>
         
@@ -546,13 +777,13 @@ onMounted(() => {
               <div class="flex items-center gap-1 bg-[#FAF4EE] p-1 rounded-xl border border-[#154337]/10 text-xs">
                 <button 
                   @click="setThisMonth" 
-                  class="px-2.5 py-1 bg-white text-gray-700 hover:text-[#154337] rounded-lg font-bold transition shadow-2xs hover:bg-[#FAF4EE]"
+                  class="px-2.5 py-1 bg-white text-gray-700 hover:text-[#154337] rounded-lg font-bold transition shadow-2xs hover:bg-[#FAF4EE] cursor-pointer"
                 >
                   本月
                 </button>
                 <button 
                   @click="setPrevMonth" 
-                  class="px-2.5 py-1 bg-white text-gray-700 hover:text-[#154337] rounded-lg font-bold transition shadow-2xs hover:bg-[#FAF4EE]"
+                  class="px-2.5 py-1 bg-white text-gray-700 hover:text-[#154337] rounded-lg font-bold transition shadow-2xs hover:bg-[#FAF4EE] cursor-pointer"
                 >
                   上月
                 </button>
@@ -639,16 +870,24 @@ onMounted(() => {
             :key="appt.id" 
             class="bg-white border border-gray-200 rounded-2xl p-4 shadow-2xs space-y-3 relative hover:border-[#154337]/30 transition"
           >
-            <!-- 卡片頂部 -->
+            <!-- 卡片頂部：顧客姓名 + 顯眼履約次數徽章 + 狀態 -->
             <div class="flex justify-between items-start border-b border-gray-100 pb-2.5">
               <div>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <span class="font-bold text-gray-900 text-base font-serif">{{ appt.client_name }}</span>
                   <span class="text-xs text-gray-400">({{ appt.client_gender || '未填' }})</span>
                 </div>
-                <span class="font-mono text-xs text-gray-400 mt-0.5 block">單號：{{ appt.appointment_code || '-' }}</span>
+                <div class="flex items-center gap-2 mt-1">
+                  <!-- 🌟 顯眼高級履約次數徽章 (Mobile) -->
+                  <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border border-amber-400/50 text-amber-900 shadow-2xs">
+                    <Icon name="mdi:crown" class="text-amber-600 text-xs shrink-0" />
+                    <span class="font-black text-[11px] tracking-tight">第 <span class="text-amber-700 font-mono font-black text-xs">{{ appt.visit_count || 1 }}</span> 次履約</span>
+                  </div>
+                  <span class="font-mono text-xs text-gray-400 block">單號：{{ appt.appointment_code || '-' }}</span>
+                </div>
               </div>
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                 <Icon name="mdi:check-circle" size="14" /> 已完成
               </span>
             </div>
@@ -685,27 +924,38 @@ onMounted(() => {
               <span class="font-bold">單筆備註：</span>{{ appt.notes }}
             </div>
 
-            <!-- 底部功能按鈕群 -->
-            <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
+            <!-- 底部功能按鈕群 (強化修改課程與產品銷售) -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+              <button 
+                @click="openFulfillmentModal(appt)" 
+                class="col-span-2 py-2 px-3 text-xs font-bold bg-[#154337] text-white hover:bg-[#11352a] rounded-xl active:scale-95 transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Icon name="mdi:cart-arrow-down" size="16" class="text-emerald-300" />
+                <span>修改課程與產品銷售明細</span>
+              </button>
+
               <button 
                 @click="openClientModal(appt)" 
-                class="flex-1 py-1.5 text-xs font-bold bg-[#154337] text-white rounded-xl active:scale-95 transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                class="py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Icon name="mdi:account-details" size="14" />
-                <span>客戶詳情 / 問卷</span>
+                <span>查看客戶</span>
               </button>
+
               <button 
                 @click="openNoteModal(appt)" 
-                class="py-1.5 px-3 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl active:scale-95 transition cursor-pointer"
+                class="py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer"
               >
-                備註
+                <Icon name="mdi:note-edit-outline" size="14" />
+                <span>單筆備註</span>
               </button>
+
               <button 
                 @click="revertAppointmentStatus(appt.id)" 
-                class="py-1.5 px-2.5 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl active:scale-95 transition cursor-pointer"
-                title="還原為待履約狀態"
+                class="col-span-2 py-1.5 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl active:scale-95 transition flex items-center justify-center gap-1 cursor-pointer"
               >
-                取消完成
+                <Icon name="mdi:undo-variant" size="14" />
+                <span>取消已完成狀態 (還原待履約)</span>
               </button>
             </div>
           </div>
@@ -721,11 +971,11 @@ onMounted(() => {
                   履約日期與時段 <Icon :name="sortField === 'date' ? (sortOrder === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down') : 'mdi:unfold-more-horizontal'" />
                 </th>
                 <th class="p-3.5">顧客姓名</th>
+                <th class="p-3.5">到店履約次數</th>
                 <th class="p-3.5">聯絡電話 / 所在地</th>
                 <th class="p-3.5">服務美容師</th>
-                <th class="p-3.5">履約狀態</th>
                 <th class="p-3.5">單筆備註</th>
-                <th class="p-3.5 text-right pr-4">操作管理</th>
+                <th class="p-3.5 text-right pr-4">操作管理 (銷售與客戶)</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -743,7 +993,15 @@ onMounted(() => {
                 <!-- 姓名與性別 -->
                 <td class="p-3.5">
                   <div class="font-bold text-gray-900 text-sm font-serif">{{ appt.client_name }}</div>
-                  <div class="text-[11px] text-gray-400">{{ appt.client_gender || '未填' }} · {{ appt.visit_count || 0 }} 次履約</div>
+                  <div class="text-[11px] text-gray-400">{{ appt.client_gender || '未填性別' }}</div>
+                </td>
+
+                <!-- 🌟 顯眼高級履約次數徽章 (Desktop) -->
+                <td class="p-3.5">
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-400/25 to-amber-500/15 border border-amber-400/60 text-amber-950 font-bold shadow-2xs">
+                    <Icon name="mdi:crown" class="text-amber-600 text-sm shrink-0 animate-bounce" />
+                    <span class="font-extrabold text-xs whitespace-nowrap">第 <strong class="text-amber-800 text-sm font-mono font-black">{{ appt.visit_count || 1 }}</strong> 次到店</span>
+                  </div>
                 </td>
                 
                 <!-- 電話與所在地 -->
@@ -764,15 +1022,8 @@ onMounted(() => {
                   </select>
                 </td>
                 
-                <!-- 狀態 -->
-                <td class="p-3.5">
-                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    <Icon name="mdi:check-circle" size="14" /> 已完成
-                  </span>
-                </td>
-                
                 <!-- 單筆備註 -->
-                <td class="p-3.5 max-w-[150px] truncate text-gray-500">
+                <td class="p-3.5 max-w-[140px] truncate text-gray-500">
                   <span v-if="appt.notes" :title="appt.notes" class="text-gray-700 font-medium cursor-help">{{ appt.notes }}</span>
                   <span v-else class="text-gray-300 italic">無備註</span>
                 </td>
@@ -780,14 +1031,27 @@ onMounted(() => {
                 <!-- 操作按鈕群 -->
                 <td class="p-3.5 text-right pr-4">
                   <div class="flex items-center justify-end gap-1.5">
+                    <!-- 核心操作按鈕：修改課程與產品銷售 -->
+                    <button 
+                      @click="openFulfillmentModal(appt)" 
+                      class="px-3 py-1.5 text-xs font-bold bg-[#154337] text-white hover:bg-[#11352a] rounded-xl transition shadow-2xs active:scale-95 flex items-center gap-1 cursor-pointer"
+                      title="修改本次預約之課程扣堂、加購包套與產品銷售"
+                    >
+                      <Icon name="mdi:cart-arrow-down" size="15" class="text-emerald-300" />
+                      <span>課程與產品銷售</span>
+                    </button>
+
+                    <!-- 查看客戶 -->
                     <button 
                       @click="openClientModal(appt)" 
-                      class="px-2.5 py-1.5 text-xs font-bold bg-[#154337] text-white hover:bg-[#11352a] rounded-xl transition shadow-2xs active:scale-95 flex items-center gap-1 cursor-pointer"
-                      title="查看客戶詳情與初次到訪問卷"
+                      class="px-2.5 py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                      title="查看客戶詳細資料、問卷與備註"
                     >
                       <Icon name="mdi:account-details" size="14" />
-                      <span>客戶詳情</span>
+                      <span>查看客戶</span>
                     </button>
+
+                    <!-- 備註 -->
                     <button 
                       @click="openNoteModal(appt)" 
                       class="px-2.5 py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition active:scale-95 cursor-pointer"
@@ -795,10 +1059,12 @@ onMounted(() => {
                     >
                       備註
                     </button>
+
+                    <!-- 取消完成 -->
                     <button 
                       @click="revertAppointmentStatus(appt.id)" 
                       class="px-2 py-1.5 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition active:scale-95 cursor-pointer"
-                      title="取消已完成狀態，還原為待履約"
+                      title="取消已完成狀態，還原為待履約 (自動復原堂數與庫存)"
                     >
                       取消完成
                     </button>
@@ -812,24 +1078,391 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 客戶詳情彈窗 -->
+    <!-- 🛒 核心彈窗：修改課程履約與產品銷售明細彈窗 (Fulfillment Management Modal) -->
+    <div v-if="showFulfillmentModal && selectedApptForFulfillment" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-5 sm:p-7 relative max-h-[92vh] overflow-y-auto border border-white/20 space-y-6">
+        
+        <!-- 關閉按鈕 -->
+        <button 
+          @click="showFulfillmentModal = false" 
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition cursor-pointer"
+        >
+          <Icon name="mdi:close" size="20" />
+        </button>
+
+        <!-- 抬頭與顧客卡片 -->
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
+              Settlement & Sales Editor
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black text-[#154337] tracking-tight font-serif flex items-center gap-2">
+            <Icon name="mdi:cart-edit" class="text-emerald-700" size="26" />
+            修改課程履約與產品銷售明細
+          </h3>
+          
+          <div class="mt-2 flex flex-wrap items-center gap-3 p-3 bg-[#FAF4EE]/70 rounded-2xl border border-[#154337]/10 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">顧客姓名：</span>
+              <strong class="text-gray-900 text-sm font-serif">{{ selectedApptForFulfillment.client_name }}</strong>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">電話：</span>
+              <span class="font-mono font-bold text-gray-800">{{ selectedApptForFulfillment.client_phone }}</span>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">預約單號：</span>
+              <span class="font-mono text-gray-700 font-bold">{{ selectedApptForFulfillment.appointment_code }}</span>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-300/60">
+              <Icon name="mdi:crown" class="text-amber-600 text-xs" />
+              <span>第 {{ selectedApptForFulfillment.visit_count || 1 }} 次履約</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="loadingFulfillment" class="text-center py-12 text-gray-400 space-y-2">
+          <Icon name="mdi:loading" class="animate-spin text-3xl text-emerald-700" />
+          <p class="text-xs">正在載入客戶包套、可選課程與產品資料庫...</p>
+        </div>
+
+        <div v-else class="space-y-6 text-xs sm:text-sm">
+          
+          <!-- 區塊 1：現有會員包套扣堂 (Courses Used) -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+              <div class="flex items-center gap-2">
+                <Icon name="mdi:card-account-details-outline" class="text-emerald-700 text-lg" />
+                <h4 class="font-bold text-gray-900 text-sm">1. 會員現有包套扣抵</h4>
+              </div>
+              <span class="text-xs text-gray-400">已扣抵或可勾選扣抵堂數</span>
+            </div>
+
+            <div v-if="clientActivePackages.length === 0" class="text-xs text-gray-400 py-3 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              該客戶目前無其他未用完之包堂合約。
+            </div>
+
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div 
+                v-for="pkg in clientActivePackages" 
+                :key="pkg.id"
+                :class="[
+                  'p-3 rounded-xl border transition flex items-center justify-between cursor-pointer select-none',
+                  selectedCoursesToDeduct[pkg.id] !== undefined
+                    ? 'bg-emerald-50/90 border-emerald-400 shadow-2xs' 
+                    : 'bg-white border-gray-200 hover:border-gray-300'
+                ]"
+                @click="toggleCourseSelection(pkg.id)"
+              >
+                <div class="flex items-center gap-2.5">
+                  <Icon 
+                    :name="selectedCoursesToDeduct[pkg.id] !== undefined ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'" 
+                    :class="['text-lg shrink-0', selectedCoursesToDeduct[pkg.id] !== undefined ? 'text-emerald-700' : 'text-gray-300']" 
+                  />
+                  <div>
+                    <div class="font-bold text-gray-900">{{ pkg.course_name }}</div>
+                    <div class="text-[11px] text-gray-400">尚餘 {{ pkg.remaining_count }} / {{ pkg.amount }} 堂</div>
+                  </div>
+                </div>
+
+                <div v-if="selectedCoursesToDeduct[pkg.id] !== undefined" @click.stop class="flex items-center gap-1 bg-white p-1 rounded-lg border border-emerald-300">
+                  <span class="text-[10px] text-gray-500 font-bold px-1">扣抵堂數:</span>
+                  <input 
+                    type="number" 
+                    v-model.number="selectedCoursesToDeduct[pkg.id]" 
+                    min="1" 
+                    :max="pkg.remaining_count + (selectedCoursesToDeduct[pkg.id] || 0)" 
+                    class="w-12 text-center text-xs font-mono font-bold border border-gray-200 rounded p-1 outline-none focus:ring-1 focus:ring-[#154337]" 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 區塊 2：現場購買新課程 / 加購包套 (New Courses Bought) -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+              <div class="flex items-center gap-2">
+                <Icon name="mdi:ticket-percent-outline" class="text-blue-600 text-lg" />
+                <h4 class="font-bold text-gray-900 text-sm">2. 現場加購新課程 / 包堂方案</h4>
+              </div>
+              <button 
+                type="button" 
+                @click="addNewCoursePurchase" 
+                class="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+              >
+                <Icon name="mdi:plus" size="14" /> 新增加購課程
+              </button>
+            </div>
+
+            <div v-if="newCoursesToBuy.length === 0" class="text-xs text-gray-400 py-3 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              無現場加購新課程或包堂（點擊右上角「+ 新增加購課程」即可新增）。
+            </div>
+
+            <div v-else class="space-y-2.5">
+              <div 
+                v-for="(item, idx) in newCoursesToBuy" 
+                :key="idx" 
+                class="p-3 bg-[#FAF4EE]/50 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 text-xs"
+              >
+                <!-- 選擇課程 -->
+                <div class="flex-1 min-w-[160px]">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">選擇課程項目</label>
+                  <select 
+                    v-model="item.course_id" 
+                    @change="onNewCourseChange(item)"
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white focus:ring-1 focus:ring-[#154337] outline-none font-medium"
+                  >
+                    <option value="">選擇課程...</option>
+                    <option v-for="c in availableCoursesList" :key="c.id" :value="c.id">
+                      {{ c.name }} (${{ c.price }}/堂)
+                    </option>
+                  </select>
+                </div>
+
+                <!-- 購買總堂數 -->
+                <div class="w-20">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">購買堂數</label>
+                  <input 
+                    type="number" 
+                    v-model.number="item.buy_amount" 
+                    min="1" 
+                    @input="onNewCourseChange(item)"
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white text-center font-mono font-bold outline-none" 
+                  />
+                </div>
+
+                <!-- 本次使用堂數 -->
+                <div class="w-20">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">本次扣用</label>
+                  <input 
+                    type="number" 
+                    v-model.number="item.use_count" 
+                    min="0" 
+                    :max="item.buy_amount" 
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white text-center font-mono font-bold outline-none" 
+                  />
+                </div>
+
+                <!-- 自訂總成交金額 -->
+                <div class="w-28">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">成交總價 ($)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="item.custom_total_price" 
+                    placeholder="特惠價格" 
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white font-mono font-bold outline-none" 
+                  />
+                </div>
+
+                <!-- 付款方式 -->
+                <div class="w-24">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">付款方式</label>
+                  <select v-model="item.payment_method" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white outline-none">
+                    <option value="Cash">現金</option>
+                    <option value="Credit">信用卡</option>
+                    <option value="LINE Pay">LINE Pay</option>
+                    <option value="Transfer">匯款</option>
+                  </select>
+                </div>
+
+                <!-- 刪除按鈕 -->
+                <button 
+                  type="button" 
+                  @click="removeNewCoursePurchase(idx)" 
+                  class="self-end sm:self-center p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                  title="刪除此項目"
+                >
+                  <Icon name="mdi:trash-can-outline" size="18" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 區塊 3：現場產品銷售 (Products Sold) -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+              <div class="flex items-center gap-2">
+                <Icon name="mdi:package-variant-closed" class="text-purple-600 text-lg" />
+                <h4 class="font-bold text-gray-900 text-sm">3. 現場保養產品銷售</h4>
+              </div>
+              <button 
+                type="button" 
+                @click="addProductSale" 
+                class="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+              >
+                <Icon name="mdi:plus" size="14" /> 新增銷售產品
+              </button>
+            </div>
+
+            <div v-if="productsToSell.length === 0" class="text-xs text-gray-400 py-3 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              無現場產品銷售紀錄（點擊右上角「+ 新增銷售產品」即可新增）。
+            </div>
+
+            <div v-else class="space-y-2.5">
+              <div 
+                v-for="(item, idx) in productsToSell" 
+                :key="idx" 
+                class="p-3 bg-[#FAF4EE]/50 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 text-xs"
+              >
+                <!-- 選擇產品 -->
+                <div class="flex-1 min-w-[160px]">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">選擇產品項目</label>
+                  <select 
+                    v-model="item.product_id" 
+                    @change="onProductSaleChange(item)"
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white focus:ring-1 focus:ring-[#154337] outline-none font-medium"
+                  >
+                    <option value="">選擇產品...</option>
+                    <option v-for="p in availableProductsList" :key="p.id" :value="p.id">
+                      {{ p.name }} (定價 ${{ p.selling_price }} / 庫存: {{ p.stock_quantity }})
+                    </option>
+                  </select>
+                </div>
+
+                <!-- 銷售數量 -->
+                <div class="w-20">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">數量</label>
+                  <input 
+                    type="number" 
+                    v-model.number="item.quantity" 
+                    min="1" 
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white text-center font-mono font-bold outline-none" 
+                  />
+                </div>
+
+                <!-- 單價 ($) -->
+                <div class="w-24">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">單價 ($)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="item.custom_unit_price" 
+                    placeholder="售價" 
+                    class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white font-mono font-bold outline-none" 
+                  />
+                </div>
+
+                <!-- 小計 -->
+                <div class="w-24 text-right">
+                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">小計</label>
+                  <span class="font-mono font-black text-gray-800 block pt-1.5">
+                    ${{ ((item.custom_unit_price || 0) * (item.quantity || 1)).toLocaleString() }}
+                  </span>
+                </div>
+
+                <!-- 付款方式 -->
+                <div class="w-24">
+                  <label class="block text-[10px] text-gray-500 font-bold mb-0.5">付款方式</label>
+                  <select v-model="item.payment_method" class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white outline-none">
+                    <option value="Cash">現金</option>
+                    <option value="Credit">信用卡</option>
+                    <option value="LINE Pay">LINE Pay</option>
+                    <option value="Transfer">匯款</option>
+                  </select>
+                </div>
+
+                <!-- 刪除按鈕 -->
+                <button 
+                  type="button" 
+                  @click="removeProductSale(idx)" 
+                  class="self-end sm:self-center p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                  title="刪除此項目"
+                >
+                  <Icon name="mdi:trash-can-outline" size="18" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 區塊 4：門市即時金額統計 -->
+          <div class="p-4 rounded-2xl bg-[#154337]/5 border border-[#154337]/15 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div>
+                <span class="text-[11px] text-gray-500 font-bold">新購包套總額</span>
+                <div class="text-base font-black text-blue-700 font-mono">${{ totalNewCoursesAmount.toLocaleString() }}</div>
+              </div>
+              <span class="text-gray-300">+</span>
+              <div>
+                <span class="text-[11px] text-gray-500 font-bold">產品銷售總額</span>
+                <div class="text-base font-black text-purple-700 font-mono">${{ totalProductsAmount.toLocaleString() }}</div>
+              </div>
+            </div>
+
+            <div class="text-right">
+              <span class="text-xs text-emerald-950 font-bold">門市實收現金流合計</span>
+              <div class="text-2xl font-black text-[#154337] font-mono">
+                ${{ (totalNewCoursesAmount + totalProductsAmount).toLocaleString() }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部操作按鈕 -->
+          <div class="flex justify-end gap-3 pt-2">
+            <button 
+              type="button" 
+              @click="showFulfillmentModal = false" 
+              class="px-5 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
+            >
+              取消
+            </button>
+            <button 
+              type="button" 
+              @click="submitUpdateFulfillment" 
+              :disabled="savingFulfillment" 
+              class="px-6 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-50"
+            >
+              <Icon v-if="savingFulfillment" name="mdi:loading" class="animate-spin" size="16" />
+              <span>{{ savingFulfillment ? '儲存更新中...' : '確認儲存所有異動' }}</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 客戶詳情彈窗 (包含更顯眼的履約次數與問卷入口) -->
     <div v-if="showClientModal && selectedClient" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
       <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto border border-white/20">
         <button @click="showClientModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
           <Icon name="mdi:close" size="20" />
         </button>
-        <h3 class="text-lg font-bold text-[#154337] mb-4 flex items-center gap-2 font-serif">
+        <h3 class="text-lg font-bold text-[#154337] mb-3 flex items-center gap-2 font-serif">
           <Icon name="mdi:account-details" class="text-emerald-700" size="22" /> 客戶詳細資料
         </h3>
-        <div class="space-y-3 text-sm">
-          <div class="grid grid-cols-2 gap-2 bg-[#FAF4EE]/50 p-3 rounded-xl border border-[#154337]/10">
-            <div><span class="text-gray-500 text-xs">姓名：</span><span class="font-bold text-gray-900">{{ selectedClient.client_name }}</span></div>
-            <div><span class="text-gray-500 text-xs">性別：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_gender || '未填寫' }}</span></div>
+
+        <div class="space-y-3.5 text-sm">
+          <!-- 🌟 顯眼高級履約次數統計卡片 -->
+          <div class="p-3.5 bg-gradient-to-br from-amber-500/15 via-amber-400/10 to-amber-500/20 rounded-2xl border border-amber-400/50 flex items-center justify-between shadow-2xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-800 flex items-center justify-center font-bold">
+                <Icon name="mdi:trophy-award" size="24" class="text-amber-700" />
+              </div>
+              <div>
+                <span class="text-xs text-amber-900 font-extrabold block">累計到店履約次數</span>
+                <span class="text-[11px] text-amber-700 font-medium">門市尊榮客戶紀錄</span>
+              </div>
+            </div>
+            <div class="text-xl font-black text-amber-800 font-mono">
+              第 {{ selectedClient.visit_count || 1 }} 次
+            </div>
           </div>
-          <div><span class="text-gray-500">電話：</span><span class="font-semibold text-gray-800 font-mono">{{ selectedClient.client_phone }}</span></div>
-          <div><span class="text-gray-500">信箱：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_email || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">所在地：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_location || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">履約次數：</span><span class="font-bold text-[#154337]">{{ selectedClient.visit_count || 0 }} 次</span></div>
+
+          <!-- 個人基本資料 -->
+          <div class="grid grid-cols-2 gap-2 bg-[#FAF4EE]/50 p-3 rounded-xl border border-[#154337]/10 text-xs">
+            <div><span class="text-gray-500">姓名：</span><span class="font-bold text-gray-900">{{ selectedClient.client_name }}</span></div>
+            <div><span class="text-gray-500">性別：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_gender || '未填寫' }}</span></div>
+          </div>
+          <div class="text-xs space-y-1.5">
+            <div><span class="text-gray-500">電話：</span><span class="font-semibold text-gray-800 font-mono">{{ selectedClient.client_phone }}</span></div>
+            <div><span class="text-gray-500">信箱：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_email || '未填寫' }}</span></div>
+            <div><span class="text-gray-500">所在地：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_location || '未填寫' }}</span></div>
+          </div>
           
           <!-- 問卷區 -->
           <div class="border-t border-gray-200 pt-3 mt-2">
@@ -837,9 +1470,10 @@ onMounted(() => {
               <span class="font-bold text-gray-800 text-xs sm:text-sm">📋 初填問卷狀態</span>
               <button 
                 @click="openQuestionnaireModal" 
-                class="text-xs bg-[#154337] text-white px-3 py-1 rounded-xl hover:bg-[#11352a] active:scale-95 transition font-bold cursor-pointer"
+                class="text-xs bg-[#154337] text-white px-3 py-1 rounded-xl hover:bg-[#11352a] active:scale-95 transition font-bold cursor-pointer flex items-center gap-1 shadow-2xs"
               >
-                {{ questionnaireData ? '編輯問卷' : '填寫問卷' }}
+                <Icon name="mdi:pencil-outline" size="14" />
+                <span>{{ questionnaireData ? '編輯問卷' : '填寫問卷' }}</span>
               </button>
             </div>
             <div v-if="loadingQuestionnaire" class="text-xs text-gray-400 py-1">載入中...</div>
@@ -858,6 +1492,7 @@ onMounted(() => {
             <div v-else class="text-xs text-gray-400 italic py-1">尚未填寫初次到店問卷</div>
           </div>
 
+          <!-- 會員備註 -->
           <div class="border-t border-gray-200 pt-3 mt-2">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs text-gray-500 font-bold">會員備註：</span>
@@ -1074,48 +1709,58 @@ onMounted(() => {
               'p-3.5 sm:p-4 rounded-2xl border transition space-y-2.5',
               questionnaireForm.agreed_to_terms ? 'bg-emerald-50/80 border-emerald-300' : 'bg-amber-50/80 border-amber-300'
             ]">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-start gap-2.5">
                   <Icon 
-                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-circle-outline'" 
-                    :class="['text-xl shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
+                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-decagram-outline'" 
+                    :class="['text-2xl shrink-0 mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
                   />
                   <div>
                     <h4 :class="['font-bold text-xs sm:text-sm', questionnaireForm.agreed_to_terms ? 'text-emerald-950' : 'text-amber-950']">
                       課程服務約定確認事項 (共 7 項規範)
                     </h4>
-                    <p :class="['text-[11px]', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']">
-                      {{ questionnaireForm.agreed_to_terms ? '已詳閱並打勾同意所有規定事項' : '送出前須開啟彈窗閱讀 7 項規定並打勾同意' }}
+                    <p :class="['text-[11px] mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700 font-medium' : 'text-amber-800 font-medium']">
+                      {{ questionnaireForm.agreed_to_terms 
+                        ? '✅ 已於規定視窗內詳閱 7 項規範並打勾同意' 
+                        : '⚠️ 尚未同意規定事項（依規範須點開彈窗閱讀並於視窗內打勾）' }}
                     </p>
                   </div>
                 </div>
 
                 <button 
                   type="button" 
-                  @click="showTermsModal = true"
+                  @click="openTermsModal"
                   :class="[
-                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shrink-0 shadow-xs active:scale-95',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-xs active:scale-95',
                     questionnaireForm.agreed_to_terms 
                       ? 'bg-emerald-800 hover:bg-emerald-900 text-white' 
                       : 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
                   ]"
                 >
                   <Icon name="mdi:file-document-outline" size="16" />
-                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '開啟規定確認彈窗' }}</span>
+                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '點此開啟規定彈窗打勾' }}</span>
                 </button>
               </div>
 
-              <!-- 同意勾選框 -->
-              <label class="flex items-start gap-2.5 pt-1.5 border-t border-black/5 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  v-model="questionnaireForm.agreed_to_terms" 
-                  class="mt-0.5 w-4 h-4 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
+              <!-- 狀態鎖定卡片：點擊開啟彈窗 -->
+              <div 
+                @click="openTermsModal"
+                :class="[
+                  'flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none',
+                  questionnaireForm.agreed_to_terms ? 'bg-white/80 border-emerald-200 text-emerald-900' : 'bg-white/80 border-amber-200 text-amber-900 hover:bg-white'
+                ]"
+              >
+                <Icon 
+                  :name="questionnaireForm.agreed_to_terms ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'" 
+                  :class="['text-lg shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-gray-400']" 
                 />
-                <span :class="['text-xs leading-relaxed font-bold', questionnaireForm.agreed_to_terms ? 'text-emerald-900' : 'text-amber-900']">
-                  本人已了解並同意以上 7 項事項，確認資料屬實並同意接受課程。 <span class="text-rose-500 font-bold">*</span>
+                <span class="font-bold flex-1">
+                  {{ questionnaireForm.agreed_to_terms 
+                    ? '本人已了解並同意以上事項，確認資料屬實並同意接受課程 (已於彈窗內完成同意)' 
+                    : '點擊此處開啟規定視窗，於彈窗內打勾同意 (未點開不可同意)' }}
                 </span>
-              </label>
+                <Icon name="mdi:chevron-right" class="text-gray-400 shrink-0" />
+              </div>
             </div>
           </div>
 
