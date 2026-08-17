@@ -18,6 +18,7 @@ const loading = ref(true)
 const showClientModal = ref(false)
 const showQuestionnaireModal = ref(false)
 const showTermsModal = ref(false)
+const tempAgreedInModal = ref(false)
 const showNoteModal = ref(false)
 const showModal = ref(false)
 const mobileModalTab = ref<'appts' | 'holidays'>('appts')
@@ -626,10 +627,19 @@ const openQuestionnaireModal = () => {
       skin_type: '', concerns: '', Habit: '', notes: '', agreed_to_terms: false
     })
   }
+  tempAgreedInModal.value = !!questionnaireForm.agreed_to_terms
   showQuestionnaireModal.value = true
 }
 
-const agreeTermsAndClose = () => {
+const openTermsModal = () => {
+  tempAgreedInModal.value = !!questionnaireForm.agreed_to_terms
+  showTermsModal.value = true
+}
+
+const confirmTermsInModal = () => {
+  if (!tempAgreedInModal.value) {
+    return alert('請在彈窗內打勾「本人確認資料屬實並同意接受課程」！')
+  }
   questionnaireForm.agreed_to_terms = true
   showTermsModal.value = false
 }
@@ -640,8 +650,8 @@ const saveQuestionnaire = async () => {
   }
 
   if (!questionnaireForm.agreed_to_terms) {
-    showTermsModal.value = true
-    return alert('請先點擊開啟規定確認事項彈窗並打勾同意後，方可送出問卷！')
+    openTermsModal()
+    return alert('請先開啟規定確認事項彈窗，並在視窗內打勾同意後方可送出！')
   }
   
   questionnaireSaving.value = true
@@ -1506,53 +1516,63 @@ const saveUserNotes = async (appt: any) => {
               ></textarea>
             </div>
 
-            <!-- 規定確認事項提示與開窗按鈕 -->
+            <!-- 規定確認事項提示與開窗按鈕 (不可在外層直接打勾，必須點開彈窗於視窗內打勾) -->
             <div :class="[
               'p-3.5 sm:p-4 rounded-2xl border transition space-y-2.5',
               questionnaireForm.agreed_to_terms ? 'bg-emerald-50/80 border-emerald-300' : 'bg-amber-50/80 border-amber-300'
             ]">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-start gap-2.5">
                   <Icon 
-                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-circle-outline'" 
-                    :class="['text-xl shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
+                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-decagram-outline'" 
+                    :class="['text-2xl shrink-0 mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
                   />
                   <div>
                     <h4 :class="['font-bold text-xs sm:text-sm', questionnaireForm.agreed_to_terms ? 'text-emerald-950' : 'text-amber-950']">
                       課程服務約定確認事項 (共 7 項規範)
                     </h4>
-                    <p :class="['text-[11px]', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']">
-                      {{ questionnaireForm.agreed_to_terms ? '已詳閱並打勾同意所有規定事項' : '送出前須開啟彈窗閱讀 7 項規定並打勾同意' }}
+                    <p :class="['text-[11px] mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700 font-medium' : 'text-amber-800 font-medium']">
+                      {{ questionnaireForm.agreed_to_terms 
+                        ? '✅ 已於規定視窗內詳閱 7 項規範並打勾同意' 
+                        : '⚠️ 尚未同意規定事項（依規範須點開彈窗閱讀並於視窗內打勾）' }}
                     </p>
                   </div>
                 </div>
 
                 <button 
                   type="button" 
-                  @click="showTermsModal = true"
+                  @click="openTermsModal"
                   :class="[
-                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shrink-0 shadow-xs active:scale-95',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-xs active:scale-95',
                     questionnaireForm.agreed_to_terms 
                       ? 'bg-emerald-800 hover:bg-emerald-900 text-white' 
                       : 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
                   ]"
                 >
                   <Icon name="mdi:file-document-outline" size="16" />
-                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '開啟規定確認彈窗' }}</span>
+                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '點此開啟規定彈窗打勾' }}</span>
                 </button>
               </div>
 
-              <!-- 同意勾選框 -->
-              <label class="flex items-start gap-2.5 pt-1.5 border-t border-black/5 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  v-model="questionnaireForm.agreed_to_terms" 
-                  class="mt-0.5 w-4 h-4 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
+              <!-- 狀態鎖定卡片：點擊開啟彈窗 -->
+              <div 
+                @click="openTermsModal"
+                :class="[
+                  'flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none',
+                  questionnaireForm.agreed_to_terms ? 'bg-white/80 border-emerald-200 text-emerald-900' : 'bg-white/80 border-amber-200 text-amber-900 hover:bg-white'
+                ]"
+              >
+                <Icon 
+                  :name="questionnaireForm.agreed_to_terms ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'" 
+                  :class="['text-lg shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-gray-400']" 
                 />
-                <span :class="['text-xs leading-relaxed font-bold', questionnaireForm.agreed_to_terms ? 'text-emerald-900' : 'text-amber-900']">
-                  本人已了解並同意以上 7 項事項，確認資料屬實並同意接受課程。 <span class="text-rose-500 font-bold">*</span>
+                <span class="font-bold flex-1">
+                  {{ questionnaireForm.agreed_to_terms 
+                    ? '本人已了解並同意以上事項，確認資料屬實並同意接受課程 (已於彈窗內完成同意)' 
+                    : '點擊此處開啟規定視窗，於彈窗內打勾同意 (未點開不可同意)' }}
                 </span>
-              </label>
+                <Icon name="mdi:chevron-right" class="text-gray-400 shrink-0" />
+              </div>
             </div>
           </div>
 
@@ -1579,8 +1599,8 @@ const saveUserNotes = async (appt: any) => {
       </div>
     </div>
 
-    <!-- 📜 課程服務約定確認事項彈窗 (Terms Modal) -->
-    <div v-if="showTermsModal" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-60 animate-fade-in">
+    <!-- 📜 課程服務約定確認事項彈窗 (Terms Modal - 最上層 z-[100]) -->
+    <div v-if="showTermsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-[100] animate-fade-in">
       <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-7 relative max-h-[90vh] overflow-y-auto border border-[#154337]/15 space-y-4">
         <!-- 關閉按鈕 -->
         <button 
@@ -1646,11 +1666,11 @@ const saveUserNotes = async (appt: any) => {
           </ol>
         </div>
 
-        <!-- 打勾同意卡片 -->
-        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/50 hover:border-emerald-600 transition cursor-pointer select-none">
+        <!-- 彈窗內打勾同意卡片 -->
+        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/60 hover:border-emerald-600 transition cursor-pointer select-none">
           <input 
             type="checkbox" 
-            v-model="questionnaireForm.agreed_to_terms" 
+            v-model="tempAgreedInModal" 
             class="mt-0.5 w-5 h-5 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
           />
           <div class="text-xs sm:text-sm text-emerald-950 font-bold leading-relaxed">
@@ -1669,8 +1689,8 @@ const saveUserNotes = async (appt: any) => {
           </button>
           <button 
             type="button" 
-            @click="agreeTermsAndClose" 
-            :disabled="!questionnaireForm.agreed_to_terms"
+            @click="confirmTermsInModal" 
+            :disabled="!tempAgreedInModal"
             class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Icon name="mdi:check" size="18" />

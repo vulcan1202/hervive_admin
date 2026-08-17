@@ -17,6 +17,7 @@ const loading = ref(false)
 const showClientModal = ref(false)
 const showQuestionnaireModal = ref(false)
 const showTermsModal = ref(false)
+const tempAgreedInModal = ref(false)
 const showNoteModal = ref(false)
 
 // ==========================================
@@ -315,10 +316,19 @@ const openQuestionnaireModal = () => {
       skin_type: '', concerns: '', Habit: '', notes: '', agreed_to_terms: false
     })
   }
+  tempAgreedInModal.value = !!questionnaireForm.agreed_to_terms
   showQuestionnaireModal.value = true
 }
 
-const agreeTermsAndClose = () => {
+const openTermsModal = () => {
+  tempAgreedInModal.value = !!questionnaireForm.agreed_to_terms
+  showTermsModal.value = true
+}
+
+const confirmTermsInModal = () => {
+  if (!tempAgreedInModal.value) {
+    return alert('請在彈窗內打勾「本人確認資料屬實並同意接受課程」！')
+  }
   questionnaireForm.agreed_to_terms = true
   showTermsModal.value = false
 }
@@ -329,8 +339,8 @@ const saveQuestionnaire = async () => {
   }
 
   if (!questionnaireForm.agreed_to_terms) {
-    showTermsModal.value = true
-    return alert('請先點擊開啟規定確認事項彈窗並打勾同意後，方可送出問卷！')
+    openTermsModal()
+    return alert('請先開啟規定確認事項彈窗，並在視窗內打勾同意後方可送出！')
   }
   
   questionnaireSaving.value = true
@@ -1059,7 +1069,7 @@ onMounted(() => {
               ></textarea>
             </div>
 
-            <!-- 規定確認事項提示與開窗按鈕 -->
+            <!-- 規定確認事項提示與開窗按鈕 (不可在外層直接打勾，必須點開彈窗於視窗內打勾) -->
             <div :class="[
               'p-3.5 sm:p-4 rounded-2xl border transition space-y-2.5',
               questionnaireForm.agreed_to_terms ? 'bg-emerald-50/80 border-emerald-300' : 'bg-amber-50/80 border-amber-300'
@@ -1132,8 +1142,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 📜 課程服務約定確認事項彈窗 (Terms Modal) -->
-    <div v-if="showTermsModal" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-60 animate-fade-in">
+    <!-- 📜 課程服務約定確認事項彈窗 (Terms Modal - 最上層 z-[100]) -->
+    <div v-if="showTermsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-[100] animate-fade-in">
       <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-7 relative max-h-[90vh] overflow-y-auto border border-[#154337]/15 space-y-4">
         <!-- 關閉按鈕 -->
         <button 
@@ -1199,15 +1209,15 @@ onMounted(() => {
           </ol>
         </div>
 
-        <!-- 打勾同意卡片 -->
-        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/50 hover:border-emerald-600 transition cursor-pointer select-none">
+        <!-- 彈窗內打勾同意卡片 -->
+        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/60 hover:border-emerald-600 transition cursor-pointer select-none">
           <input 
             type="checkbox" 
-            v-model="questionnaireForm.agreed_to_terms" 
+            v-model="tempAgreedInModal" 
             class="mt-0.5 w-5 h-5 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
           />
           <div class="text-xs sm:text-sm text-emerald-950 font-bold leading-relaxed">
-            本人確認資料屬實並同意接受課程
+            本人確認資料屬實並同意接受課程 <span class="text-rose-500">*</span>
           </div>
         </label>
 
@@ -1222,8 +1232,8 @@ onMounted(() => {
           </button>
           <button 
             type="button" 
-            @click="agreeTermsAndClose" 
-            :disabled="!questionnaireForm.agreed_to_terms"
+            @click="confirmTermsInModal" 
+            :disabled="!tempAgreedInModal"
             class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Icon name="mdi:check" size="18" />
