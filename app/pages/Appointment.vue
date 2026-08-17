@@ -17,6 +17,7 @@ const errorMessage = ref('')
 // ==========================================
 const showClientModal = ref(false)
 const showQuestionnaireModal = ref(false)
+const showTermsModal = ref(false)
 const showNoteModal = ref(false)
 
 // ==========================================
@@ -306,14 +307,19 @@ const openQuestionnaireModal = () => {
   showQuestionnaireModal.value = true
 }
 
+const agreeTermsAndClose = () => {
+  questionnaireForm.agreed_to_terms = true
+  showTermsModal.value = false
+}
+
 const saveQuestionnaire = async () => {
   if (!selectedClient.value?.user_id) {
     return alert('缺少客戶會員編號，無法儲存問卷！')
   }
 
-  const isNew = !questionnaireData.value || !questionnaireData.value.agreed_to_terms;
-  if (isNew && !questionnaireForm.agreed_to_terms) {
-    return alert('請先閱讀並勾選「同意服務與課程條款」！');
+  if (!questionnaireForm.agreed_to_terms) {
+    showTermsModal.value = true
+    return alert('請先點擊開啟規定確認事項彈窗並打勾同意後，方可送出問卷！')
   }
   
   questionnaireSaving.value = true
@@ -1328,7 +1334,7 @@ const submitCompleteAppointment = async () => {
           </div>
 
           <!-- 4. 其他備註與同意書條款 -->
-          <div class="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-3">
+          <div class="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-3.5">
             <div>
               <label class="block font-bold text-gray-700 mb-1">其他補充備註 / 美容師註記</label>
               <textarea 
@@ -1339,17 +1345,54 @@ const submitCompleteAppointment = async () => {
               ></textarea>
             </div>
 
-            <!-- 同意書條款勾選 -->
-            <label class="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer select-none">
-              <input 
-                type="checkbox" 
-                v-model="questionnaireForm.agreed_to_terms" 
-                class="mt-0.5 w-4 h-4 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
-              />
-              <span class="text-xs text-emerald-900 leading-relaxed font-medium">
-                我已確認並如實填寫上述肌膚與健康狀況，並同意遵循店內專業護膚與預約服務條款。 <span class="text-rose-500 font-bold">*</span>
-              </span>
-            </label>
+            <!-- 規定確認事項提示與開窗按鈕 -->
+            <div :class="[
+              'p-3.5 sm:p-4 rounded-2xl border transition space-y-2.5',
+              questionnaireForm.agreed_to_terms ? 'bg-emerald-50/80 border-emerald-300' : 'bg-amber-50/80 border-amber-300'
+            ]">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <Icon 
+                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-circle-outline'" 
+                    :class="['text-xl shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
+                  />
+                  <div>
+                    <h4 :class="['font-bold text-xs sm:text-sm', questionnaireForm.agreed_to_terms ? 'text-emerald-950' : 'text-amber-950']">
+                      課程服務約定確認事項 (共 7 項規範)
+                    </h4>
+                    <p :class="['text-[11px]', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']">
+                      {{ questionnaireForm.agreed_to_terms ? '已詳閱並打勾同意所有規定事項' : '送出前須開啟彈窗閱讀 7 項規定並打勾同意' }}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  type="button" 
+                  @click="showTermsModal = true"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shrink-0 shadow-xs active:scale-95',
+                    questionnaireForm.agreed_to_terms 
+                      ? 'bg-emerald-800 hover:bg-emerald-900 text-white' 
+                      : 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
+                  ]"
+                >
+                  <Icon name="mdi:file-document-outline" size="16" />
+                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '開啟規定確認彈窗' }}</span>
+                </button>
+              </div>
+
+              <!-- 同意勾選框 -->
+              <label class="flex items-start gap-2.5 pt-1.5 border-t border-black/5 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  v-model="questionnaireForm.agreed_to_terms" 
+                  class="mt-0.5 w-4 h-4 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
+                />
+                <span :class="['text-xs leading-relaxed font-bold', questionnaireForm.agreed_to_terms ? 'text-emerald-900' : 'text-amber-900']">
+                  本人已了解並同意以上 7 項事項，確認資料屬實並同意接受課程。 <span class="text-rose-500">*</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <!-- 底部操作按鈕 -->
@@ -1372,6 +1415,108 @@ const submitCompleteAppointment = async () => {
           </div>
 
         </form>
+      </div>
+    </div>
+
+    <!-- 📜 課程服務約定確認事項彈窗 (Terms Modal) -->
+    <div v-if="showTermsModal" class="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-60 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-7 relative max-h-[90vh] overflow-y-auto border border-[#154337]/15 space-y-4">
+        <!-- 關閉按鈕 -->
+        <button 
+          @click="showTermsModal = false" 
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition cursor-pointer"
+        >
+          <Icon name="mdi:close" size="20" />
+        </button>
+
+        <!-- 抬頭 -->
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2.5 py-0.5 rounded-full bg-[#154337]/10 text-[#154337] text-[10px] font-mono font-bold uppercase tracking-wider">
+              Terms & Service Agreement
+            </span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black text-[#154337] tracking-tight font-serif flex items-center gap-2">
+            <Icon name="mdi:file-document-check-outline" class="text-emerald-700" size="26" />
+            課程服務約定事項
+          </h3>
+          <p class="text-xs text-gray-500 mt-1">
+            請仔細閱讀以下所有規範，確認後請於下方打勾同意：
+          </p>
+        </div>
+
+        <!-- 條款清單 -->
+        <div class="bg-[#FAF4EE]/80 rounded-2xl p-4 sm:p-5 border border-[#154337]/10 space-y-3 text-xs sm:text-sm text-gray-800 leading-relaxed">
+          <div class="font-bold text-[#154337] border-b border-[#154337]/15 pb-2 flex items-center gap-1.5">
+            <Icon name="mdi:information-outline" class="text-emerald-700" size="18" />
+            <span>本人已了解並同意以下事項：</span>
+          </div>
+
+          <ol class="space-y-2.5 pl-1 text-gray-700">
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">1</span>
+              <span><strong>肌膚更新週期</strong>約 28 天，效果依個人體質不同。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">2</span>
+              <span>課程後可能出現短暫<strong>泛紅、乾燥、代謝反應</strong>，屬正常現象。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">3</span>
+              <span>本課程<strong>非醫療行為</strong>，無法保證立即改善。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">4</span>
+              <span>術後請務必<strong>加強保濕與防曬</strong>。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">5</span>
+              <span>已主動告知<strong>懷孕、服藥、皮膚疾病</strong>等狀況。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">6</span>
+              <span>如有不適將立即聯繫<strong>赫璀美學</strong>。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-[#154337] text-white flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5 font-mono">7</span>
+              <span>當月活動方案皆為優惠價格，故若需退費按<strong>原價</strong>計算。</span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- 打勾同意卡片 -->
+        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/50 hover:border-emerald-600 transition cursor-pointer select-none">
+          <input 
+            type="checkbox" 
+            v-model="questionnaireForm.agreed_to_terms" 
+            class="mt-0.5 w-5 h-5 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
+          />
+          <div class="text-xs sm:text-sm text-emerald-950 font-bold leading-relaxed">
+            本人確認資料屬實並同意接受課程
+          </div>
+        </label>
+
+        <!-- 彈窗底部按鈕 -->
+        <div class="flex gap-3 pt-1">
+          <button 
+            type="button" 
+            @click="showTermsModal = false" 
+            class="flex-1 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
+          >
+            返回
+          </button>
+          <button 
+            type="button" 
+            @click="agreeTermsAndClose" 
+            :disabled="!questionnaireForm.agreed_to_terms"
+            class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Icon name="mdi:check" size="18" />
+            <span>我已了解並同意</span>
+          </button>
+        </div>
+
       </div>
     </div>
 
