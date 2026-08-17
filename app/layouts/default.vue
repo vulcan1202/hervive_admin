@@ -81,6 +81,13 @@
           <span v-if="!isCollapsed" class="text-sm font-medium">預約管理</span>
         </NuxtLink>
 
+        <NuxtLink to="/completed" :class="getNavLinkClass('/completed')" @click="closeSidebarOnMobile">
+          <div :class="getIconWrapperClass('/completed')">
+            <Icon name="mdi:calendar-check-outline" class="text-[19px]" />
+          </div>
+          <span v-if="!isCollapsed" class="text-sm font-medium">已完成預約</span>
+        </NuxtLink>
+
         <!-- 分組 2：業務與財務 -->
         <div v-if="!isCollapsed" class="text-[10px] uppercase font-mono tracking-widest text-white/45 px-3.5 pt-4 pb-1 font-semibold">
           業務與財務 · FINANCE
@@ -484,6 +491,7 @@ const routeTitleMap: Record<string, string> = {
   '/': '智能儀表盤',
   '/calendar': '休假與行事曆一覽',
   '/Appointment': '預約管理列表',
+  '/completed': '已完成預約履約管理',
   '/products': '產品與進銷存管理',
   '/courses': '課程方案與會員包堂',
   '/finance': '財務收支與營收認列',
