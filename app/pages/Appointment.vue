@@ -1365,25 +1365,43 @@ const submitCompleteAppointment = async () => {
               ></textarea>
             </div>
 
-            <!-- 規定確認事項提示與開窗按鈕 (不可在外層直接打勾，必須點開彈窗於視窗內打勾) -->
-            <div :class="[
-              'p-3.5 sm:p-4 rounded-2xl border transition space-y-2.5',
-              questionnaireForm.agreed_to_terms ? 'bg-emerald-50/80 border-emerald-300' : 'bg-amber-50/80 border-amber-300'
-            ]">
+            <!-- 規定確認事項提示與開窗按鈕 (完全鎖定外層，禁止外層直接同意，必須點開彈窗於視窗內打勾) -->
+            <div v-if="!questionnaireForm.agreed_to_terms" class="p-4 rounded-2xl bg-amber-50/90 border-2 border-amber-300/80 space-y-3 shadow-2xs">
+              <div class="flex items-start gap-2.5">
+                <Icon name="mdi:shield-alert-outline" class="text-2xl text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 class="font-bold text-xs sm:text-sm text-amber-950 flex items-center gap-1.5">
+                    <span>課程服務約定確認事項 (共 7 項規範)</span>
+                    <span class="px-2 py-0.5 rounded-md bg-amber-200/70 text-amber-900 text-[10px] font-bold">尚未確認</span>
+                  </h4>
+                  <p class="text-[11px] text-amber-800 font-medium mt-1 leading-relaxed">
+                    依美學服務規範，送出問卷前必須先點開下方彈窗「詳閱 7 項規定」，並於彈窗視窗內完成打勾確認（未點開視窗無法同意）。
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                @click="openTermsModal"
+                class="w-full py-2.5 px-4 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-700 active:scale-98 text-white shadow-xs transition flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+              >
+                <Icon name="mdi:file-document-check" size="18" />
+                <span>點此開啟規定彈窗並於視窗內打勾同意 (共 7 項)</span>
+              </button>
+            </div>
+
+            <!-- 已同意狀態卡片 -->
+            <div v-else class="p-4 rounded-2xl bg-emerald-50/90 border-2 border-emerald-300 space-y-2.5 shadow-2xs">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div class="flex items-start gap-2.5">
-                  <Icon 
-                    :name="questionnaireForm.agreed_to_terms ? 'mdi:check-decagram' : 'mdi:alert-decagram-outline'" 
-                    :class="['text-2xl shrink-0 mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-amber-700']" 
-                  />
+                  <Icon name="mdi:check-decagram" class="text-2xl text-emerald-700 shrink-0 mt-0.5" />
                   <div>
-                    <h4 :class="['font-bold text-xs sm:text-sm', questionnaireForm.agreed_to_terms ? 'text-emerald-950' : 'text-amber-950']">
-                      課程服務約定確認事項 (共 7 項規範)
+                    <h4 class="font-bold text-xs sm:text-sm text-emerald-950 flex items-center gap-1.5">
+                      <span>課程服務約定確認事項</span>
+                      <span class="px-2 py-0.5 rounded-md bg-emerald-200/70 text-emerald-900 text-[10px] font-bold">✅ 已於彈窗內完成同意</span>
                     </h4>
-                    <p :class="['text-[11px] mt-0.5', questionnaireForm.agreed_to_terms ? 'text-emerald-700 font-medium' : 'text-amber-800 font-medium']">
-                      {{ questionnaireForm.agreed_to_terms 
-                        ? '✅ 已於規定視窗內詳閱 7 項規範並打勾同意' 
-                        : '⚠️ 尚未同意規定事項（依規範須點開彈窗閱讀並於視窗內打勾）' }}
+                    <p class="text-[11px] text-emerald-700 font-medium mt-0.5">
+                      已於規定彈窗內詳閱 7 項規範並確認「本人確認資料屬實並同意接受課程」。
                     </p>
                   </div>
                 </div>
@@ -1391,36 +1409,11 @@ const submitCompleteAppointment = async () => {
                 <button 
                   type="button" 
                   @click="openTermsModal"
-                  :class="[
-                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-xs active:scale-95',
-                    questionnaireForm.agreed_to_terms 
-                      ? 'bg-emerald-800 hover:bg-emerald-900 text-white' 
-                      : 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
-                  ]"
+                  class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-800 hover:bg-emerald-900 text-white shadow-xs transition flex items-center justify-center gap-1 cursor-pointer shrink-0 active:scale-95"
                 >
-                  <Icon name="mdi:file-document-outline" size="16" />
-                  <span>{{ questionnaireForm.agreed_to_terms ? '重新檢視規定彈窗' : '點此開啟規定彈窗打勾' }}</span>
+                  <Icon name="mdi:file-document-outline" size="14" />
+                  <span>重新檢視規定</span>
                 </button>
-              </div>
-
-              <!-- 狀態鎖定卡片：點擊開啟彈窗 -->
-              <div 
-                @click="openTermsModal"
-                :class="[
-                  'flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none',
-                  questionnaireForm.agreed_to_terms ? 'bg-white/80 border-emerald-200 text-emerald-900' : 'bg-white/80 border-amber-200 text-amber-900 hover:bg-white'
-                ]"
-              >
-                <Icon 
-                  :name="questionnaireForm.agreed_to_terms ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'" 
-                  :class="['text-lg shrink-0', questionnaireForm.agreed_to_terms ? 'text-emerald-700' : 'text-gray-400']" 
-                />
-                <span class="font-bold flex-1">
-                  {{ questionnaireForm.agreed_to_terms 
-                    ? '本人已了解並同意以上事項，確認資料屬實並同意接受課程 (已於彈窗內完成同意)' 
-                    : '點擊此處開啟規定視窗，於彈窗內打勾同意 (未點開不可同意)' }}
-                </span>
-                <Icon name="mdi:chevron-right" class="text-gray-400 shrink-0" />
               </div>
             </div>
           </div>
@@ -1436,11 +1429,18 @@ const submitCompleteAppointment = async () => {
             </button>
             <button 
               type="submit" 
-              :disabled="questionnaireSaving" 
-              class="px-6 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-50"
+              :disabled="!questionnaireForm.agreed_to_terms || questionnaireSaving" 
+              :class="[
+                'px-6 py-2.5 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs',
+                questionnaireForm.agreed_to_terms 
+                  ? 'text-white bg-[#154337] hover:bg-[#11352a] active:scale-95 cursor-pointer' 
+                  : 'text-gray-400 bg-gray-200 cursor-not-allowed opacity-70'
+              ]"
+              :title="!questionnaireForm.agreed_to_terms ? '請先點開上方彈窗完成 7 項規定同意' : '確認儲存問卷'"
             >
               <Icon v-if="questionnaireSaving" name="mdi:loading" class="animate-spin" size="16" />
-              <span>{{ questionnaireSaving ? '儲存中...' : '確認儲存問卷' }}</span>
+              <Icon v-else-if="!questionnaireForm.agreed_to_terms" name="mdi:lock-outline" size="16" />
+              <span>{{ questionnaireSaving ? '儲存中...' : (questionnaireForm.agreed_to_terms ? '確認儲存問卷' : '未同意規定 (須點開彈窗確認)') }}</span>
             </button>
           </div>
 
