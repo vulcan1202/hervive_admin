@@ -1666,15 +1666,43 @@ const saveUserNotes = async (appt: any) => {
           </ol>
         </div>
 
-        <!-- 彈窗內打勾同意卡片 -->
-        <label class="flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500/60 hover:border-emerald-600 transition cursor-pointer select-none">
+        <!-- 彈窗內打勾同意卡片 (具備明確狀態提示) -->
+        <label 
+          :class="[
+            'flex items-start gap-3.5 p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none',
+            tempAgreedInModal 
+              ? 'bg-emerald-50/90 border-emerald-500 shadow-xs text-emerald-950' 
+              : 'bg-amber-50/90 border-amber-400 hover:border-amber-500 shadow-2xs text-amber-950'
+          ]"
+        >
           <input 
             type="checkbox" 
             v-model="tempAgreedInModal" 
-            class="mt-0.5 w-5 h-5 rounded text-[#154337] focus:ring-[#154337] cursor-pointer"
+            class="mt-1 w-5 h-5 rounded text-[#154337] focus:ring-[#154337] cursor-pointer shrink-0"
           />
-          <div class="text-xs sm:text-sm text-emerald-950 font-bold leading-relaxed">
-            本人確認資料屬實並同意接受課程
+          <div class="space-y-1 flex-1">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs sm:text-sm font-black leading-snug">
+                本人確認資料屬實並同意接受課程 <span class="text-rose-500">*</span>
+              </span>
+              <!-- 狀態提示徽章 -->
+              <span 
+                :class="[
+                  'px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 flex items-center gap-1 transition',
+                  tempAgreedInModal 
+                    ? 'bg-emerald-200/80 text-emerald-900' 
+                    : 'bg-amber-200 text-amber-900'
+                ]"
+              >
+                <Icon :name="tempAgreedInModal ? 'mdi:check-circle' : 'mdi:alert-circle-outline'" size="13" />
+                <span>{{ tempAgreedInModal ? '已勾選同意' : '尚未勾選' }}</span>
+              </span>
+            </div>
+            <p :class="['text-[11px] leading-relaxed', tempAgreedInModal ? 'text-emerald-700 font-medium' : 'text-amber-800 font-medium']">
+              {{ tempAgreedInModal 
+                ? '✅ 已確認所有 7 項規範，請點擊下方「我已了解並同意」送出。' 
+                : '👉 請點擊此處方框完成打勾，確認已充分理解並同意上述 7 項約定。' }}
+            </p>
           </div>
         </label>
 
