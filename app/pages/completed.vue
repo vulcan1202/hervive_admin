@@ -284,62 +284,76 @@ const openFulfillmentModal = async (appt: any) => {
 
   try {
     const [pkgRes, courseRes, prodRes, detailRes] = await Promise.all([
-      fetch(`${backendUrl}/api/users-courses?user_id=${appt.user_id}&has_remaining=true`),
+      fetch(`${backendUrl}/api/users-courses?user_id=${appt.user_id}`),
       fetch(`${backendUrl}/api/courses`),
       fetch(`${backendUrl}/api/products`),
       fetch(`${backendUrl}/api/appointments/fulfillment?appointment_id=${appt.id}`)
     ])
     
+    let detailData: any = {}
+    if (detailRes.ok) {
+      detailData = (await detailRes.json()).data || {}
+    }
+
     if (pkgRes.ok) {
-      const pkgData = await pkgRes.json()
-      clientActivePackages.value = pkgData.data || []
+      const allPkgs = (await pkgRes.json()).data || []
+      // 計算該包套「在本預約點收前的實際可用堂數」 = remaining_count + (本單過去扣除的堂數)
+      clientActivePackages.value = allPkgs.map((pkg: any) => {
+        const prevUsed = detailData.courses_used?.find((cu: any) => cu.user_course_id === pkg.id)?.use_count || 0
+        return {
+          ...pkg,
+          prev_used_in_appt: prevUsed,
+          effective_remaining: pkg.remaining_count + prevUsed
+        }
+      }).filter((pkg: any) => pkg.effective_remaining > 0)
     }
     
     if (courseRes.ok) {
-      const courseData = await courseRes.json()
-      availableCoursesList.value = courseData.data || []
+      availableCoursesList.value = (await courseRes.json()).data || []
     }
 
     if (prodRes.ok) {
-      const prodData = await prodRes.json()
-      availableProductsList.value = prodData.data || []
+      const allProds = (await prodRes.json()).data || []
+      // 計算該產品「在本預約銷貨前的實際可用庫存」 = stock_quantity + (本單過去銷售的數量)
+      availableProductsList.value = allProds.map((prod: any) => {
+        const prevSold = detailData.products_sold?.find((ps: any) => ps.product_id === prod.id)?.quantity || 0
+        return {
+          ...prod,
+          prev_sold_in_appt: prevSold,
+          effective_stock: prod.stock_quantity + prevSold
+        }
+      })
     }
 
-    if (detailRes.ok) {
-      const detailData = (await detailRes.json()).data || {}
-      
-      // 1. 回填現有包堂扣除
-      if (detailData.courses_used && Array.isArray(detailData.courses_used)) {
-        for (const cu of detailData.courses_used) {
-          selectedCoursesToDeduct[cu.user_course_id] = cu.use_count || 1
-        }
+    // 1. 回填現有包堂扣除
+    if (detailData.courses_used && Array.isArray(detailData.courses_used)) {
+      for (const cu of detailData.courses_used) {
+        selectedCoursesToDeduct[cu.user_course_id] = cu.use_count || 1
       }
+    }
 
-      // 2. 回填現場加購課程 (若有)
-      if (detailData.new_courses_bought && Array.isArray(detailData.new_courses_bought)) {
-        // 從 cash_transactions 解析
-        for (const cb of detailData.new_courses_bought) {
-          // 例如 description: 現場購買「XXX」共 1 堂 (預約#123)
-          newCoursesToBuy.value.push({
-            course_id: '',
-            buy_amount: 1,
-            use_count: 1,
-            payment_method: cb.payment_method || 'Cash',
-            custom_total_price: cb.amount || undefined
-          })
-        }
+    // 2. 回填現場加購課程 (若有)
+    if (detailData.new_courses_bought && Array.isArray(detailData.new_courses_bought)) {
+      for (const cb of detailData.new_courses_bought) {
+        newCoursesToBuy.value.push({
+          course_id: '',
+          buy_amount: 1,
+          use_count: 1,
+          payment_method: cb.payment_method || 'Cash',
+          custom_total_price: cb.amount || undefined
+        })
       }
+    }
 
-      // 3. 回填現場銷售產品
-      if (detailData.products_sold && Array.isArray(detailData.products_sold)) {
-        for (const ps of detailData.products_sold) {
-          productsToSell.value.push({
-            product_id: ps.product_id,
-            quantity: ps.quantity || 1,
-            payment_method: ps.payment_method || 'Cash',
-            custom_unit_price: ps.unit_price || ps.selling_price || 0
-          })
-        }
+    // 3. 回填現場銷售產品
+    if (detailData.products_sold && Array.isArray(detailData.products_sold)) {
+      for (const ps of detailData.products_sold) {
+        productsToSell.value.push({
+          product_id: ps.product_id,
+          quantity: ps.quantity || 1,
+          payment_method: ps.payment_method || 'Cash',
+          custom_unit_price: ps.unit_price || ps.selling_price || 0
+        })
       }
     }
   } catch (err) {
@@ -1166,7 +1180,9 @@ onMounted(() => {
                   />
                   <div>
                     <div class="font-bold text-gray-900">{{ pkg.course_name }}</div>
-                    <div class="text-[11px] text-gray-400">尚餘 {{ pkg.remaining_count }} / {{ pkg.amount }} 堂</div>
+                    <div class="text-[11px] text-gray-500">
+                      可扣上限: <strong class="text-emerald-700 font-mono font-bold">{{ pkg.effective_remaining }}</strong> 堂 (目前剩餘 {{ pkg.remaining_count }} 堂 / 總合約 {{ pkg.amount }} 堂)
+                    </div>
                   </div>
                 </div>
 
@@ -1176,7 +1192,7 @@ onMounted(() => {
                     type="number" 
                     v-model.number="selectedCoursesToDeduct[pkg.id]" 
                     min="1" 
-                    :max="pkg.remaining_count + (selectedCoursesToDeduct[pkg.id] || 0)" 
+                    :max="pkg.effective_remaining" 
                     class="w-12 text-center text-xs font-mono font-bold border border-gray-200 rounded p-1 outline-none focus:ring-1 focus:ring-[#154337]" 
                   />
                 </div>
@@ -1320,7 +1336,7 @@ onMounted(() => {
                   >
                     <option value="">選擇產品...</option>
                     <option v-for="p in availableProductsList" :key="p.id" :value="p.id">
-                      {{ p.name }} (定價 ${{ p.selling_price }} / 庫存: {{ p.stock_quantity }})
+                      {{ p.name }} (定價 ${{ p.selling_price }} / 可銷庫存: {{ p.effective_stock }})
                     </option>
                   </select>
                 </div>
@@ -1332,6 +1348,7 @@ onMounted(() => {
                     type="number" 
                     v-model.number="item.quantity" 
                     min="1" 
+                    :max="availableProductsList.find(p => p.id === Number(item.product_id))?.effective_stock || 999"
                     class="w-full border border-gray-300 rounded-lg p-1.5 text-xs bg-white text-center font-mono font-bold outline-none" 
                   />
                 </div>
