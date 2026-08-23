@@ -21,6 +21,127 @@ const showTermsModal = ref(false)
 const tempAgreedInModal = ref(false)
 const showNoteModal = ref(false)
 
+// 🌟 手動代客預約 / 幽靈客戶狀態
+const showManualBookingModal = ref(false)
+const manualBookingSaving = ref(false)
+const manualBookingMode = ref<'new_ghost' | 'existing_user'>('new_ghost')
+const usersList = ref<any[]>([])
+const loadingUsersList = ref(false)
+const manualUserSearchQuery = ref('')
+
+const manualBookingForm = reactive({
+  last_name: '',
+  first_name: '',
+  phone: '',
+  selected_user_id: null as number | null,
+  dateObj: null as Date | null,
+  start_time: '14:00',
+  beautician_id: '' as any,
+  notes: ''
+})
+
+const filteredUsersList = computed(() => {
+  if (!manualUserSearchQuery.value.trim()) return usersList.value
+  const q = manualUserSearchQuery.value.trim().toLowerCase()
+  return usersList.value.filter(u => 
+    `${u.last_name || ''}${u.first_name || ''}`.toLowerCase().includes(q) ||
+    (u.phone && u.phone.includes(q))
+  )
+})
+
+const fetchUsersList = async () => {
+  loadingUsersList.value = true
+  try {
+    const res = await fetch(`${backendUrl}/api/users`)
+    if (res.ok) {
+      const data = await res.json()
+      usersList.value = data.data || []
+    }
+  } catch (err) {
+    console.error('讀取會員清單失敗', err)
+  } finally {
+    loadingUsersList.value = false
+  }
+}
+
+const openManualBookingModal = async (initialDate?: string) => {
+  manualBookingMode.value = 'new_ghost'
+  manualUserSearchQuery.value = ''
+  if (initialDate) {
+    const [y, m, d] = initialDate.split('-').map(Number)
+    manualBookingForm.dateObj = new Date(y, m - 1, d)
+  } else {
+    manualBookingForm.dateObj = new Date()
+  }
+  manualBookingForm.last_name = ''
+  manualBookingForm.first_name = ''
+  manualBookingForm.phone = ''
+  manualBookingForm.selected_user_id = null
+  manualBookingForm.start_time = '14:00'
+  manualBookingForm.beautician_id = ''
+  manualBookingForm.notes = ''
+  showManualBookingModal.value = true
+  await fetchUsersList()
+}
+
+const selectExistingUser = (u: any) => {
+  manualBookingForm.selected_user_id = u.id
+}
+
+const submitManualBooking = async () => {
+  if (!manualBookingForm.dateObj) return alert('請選擇預約日期！')
+  const dateStr = formatDateToString(manualBookingForm.dateObj)
+  if (!dateStr) return alert('請選擇有效的預約日期！')
+  if (!manualBookingForm.start_time) return alert('請選擇預約時間！')
+
+  const payload: any = {
+    date: dateStr,
+    start_time: manualBookingForm.start_time,
+    beautician_id: manualBookingForm.beautician_id ? Number(manualBookingForm.beautician_id) : null,
+    status: 'confirmed',
+    notes: manualBookingForm.notes.trim() || null
+  }
+
+  if (manualBookingMode.value === 'new_ghost') {
+    if (!manualBookingForm.last_name.trim() || !manualBookingForm.first_name.trim()) {
+      return alert('請填寫客戶姓氏與名字！')
+    }
+    if (!manualBookingForm.phone.trim()) {
+      return alert('請填寫客戶手機號碼（作為日後轉正對帳憑證）！')
+    }
+    payload.ghost_user = {
+      last_name: manualBookingForm.last_name.trim(),
+      first_name: manualBookingForm.first_name.trim(),
+      phone: manualBookingForm.phone.trim(),
+      notes: manualBookingForm.notes.trim() || null
+    }
+  } else {
+    if (!manualBookingForm.selected_user_id) {
+      return alert('請在清單中選取預約會員！')
+    }
+    payload.user_id = manualBookingForm.selected_user_id
+  }
+
+  manualBookingSaving.value = true
+  try {
+    const res = await fetch(`${backendUrl}/api/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const resData = await res.json()
+    if (!res.ok) throw new Error(resData.error || '手動預約失敗')
+
+    alert('✅ 手動代客預約成功！時段已鎖定並確認。')
+    showManualBookingModal.value = false
+    await refreshAllData()
+  } catch (err: any) {
+    alert(err.message || '預約失敗，請重試')
+  } finally {
+    manualBookingSaving.value = false
+  }
+}
+
 // ==========================================
 // 3. 通用輔助函式
 // ==========================================
@@ -655,6 +776,13 @@ const submitCompleteAppointment = async () => {
         </div>
         
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <button 
+            @click="openManualBookingModal()" 
+            class="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#876D5A] text-white hover:bg-[#725a49] active:scale-95 shadow-xs transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Icon name="mdi:calendar-plus" size="18" />
+            <span>＋ 手動新增預約 (代約)</span>
+          </button>
           <NuxtLink 
             to="/completed" 
             class="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 active:scale-95 shadow-xs transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -785,6 +913,12 @@ const submitCompleteAppointment = async () => {
                   <span class="text-xs text-gray-500 font-bold">客戶姓名</span>
                   <button @click="openClientModal(appt)" class="text-[#154337] font-bold text-sm flex items-center gap-1">
                     <span class="underline decoration-dotted underline-offset-2">{{ appt.client_name }}</span>
+                    <span v-if="appt.client_is_ghost === 1" class="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                      👻 幽靈
+                    </span>
+                    <span v-else class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                      🌐 會員
+                    </span>
                     <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full ml-1 font-black">{{ appt.visit_count }}次</span>
                   </button>
                 </div>
@@ -857,8 +991,14 @@ const submitCompleteAppointment = async () => {
                     </select>
                   </td>
                   <td class="p-3.5 font-medium">
-                    <button @click="openClientModal(appt)" class="text-[#154337] font-bold underline decoration-dotted hover:text-black transition flex items-center gap-1 cursor-pointer">
-                      {{ appt.client_name }}
+                    <button @click="openClientModal(appt)" class="text-[#154337] font-bold underline decoration-dotted hover:text-black transition flex items-center gap-1.5 cursor-pointer">
+                      <span>{{ appt.client_name }}</span>
+                      <span v-if="appt.client_is_ghost === 1" class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">
+                        👻 幽靈
+                      </span>
+                      <span v-else class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold">
+                        🌐 會員
+                      </span>
                       <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
                         履約 {{ appt.visit_count }} 次
                       </span>
@@ -1176,6 +1316,178 @@ const submitCompleteAppointment = async () => {
           <button @click="submitEditTime" :disabled="editTimeSaving" class="flex-1 py-2.5 text-xs font-bold text-white bg-[#154337] hover:bg-[#11352a] rounded-xl transition cursor-pointer flex items-center justify-center gap-1 active:scale-95 shadow-xs">
             <Icon v-if="editTimeSaving" name="mdi:loading" class="animate-spin" size="16" />
             <span>{{ editTimeSaving ? '更新中...' : '確認變更時間' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🗓️ 手動新增預約 Modal (代客預約 / 幽靈客戶) -->
+    <div v-if="showManualBookingModal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-fade-in">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-7 relative border border-white/20 max-h-[92vh] overflow-y-auto">
+        <button @click="showManualBookingModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full p-1.5 transition cursor-pointer">
+          <Icon name="mdi:close" size="20" />
+        </button>
+
+        <h3 class="text-lg sm:text-xl font-bold text-[#154337] mb-1 flex items-center gap-2 font-serif">
+          <Icon name="mdi:calendar-plus" class="text-[#876D5A]" size="24" />
+          手動代客預約 / 建立預約
+        </h3>
+        <p class="text-xs text-gray-500 mb-5">
+          由店家代客快速建立預約並直接鎖定時段，避免線上重疊預約撞期。
+        </p>
+
+        <!-- 模式切換：建立新幽靈客戶 vs 選擇現有會員 -->
+        <div class="flex bg-gray-100 p-1 rounded-2xl mb-5">
+          <button 
+            type="button"
+            @click="manualBookingMode = 'new_ghost'"
+            :class="['flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5', manualBookingMode === 'new_ghost' ? 'bg-white text-[#154337] shadow-xs' : 'text-gray-500 hover:text-gray-800']"
+          >
+            <span>👻 快速建立幽靈客戶 (私訊新客)</span>
+          </button>
+          <button 
+            type="button"
+            @click="manualBookingMode = 'existing_user'"
+            :class="['flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5', manualBookingMode === 'existing_user' ? 'bg-white text-[#154337] shadow-xs' : 'text-gray-500 hover:text-gray-800']"
+          >
+            <span>🔍 選擇現有會員 / 幽靈</span>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- 模式一：建立新幽靈客戶 -->
+          <div v-if="manualBookingMode === 'new_ghost'" class="p-4 bg-purple-50/50 rounded-2xl border border-purple-200/70 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
+                <Icon name="mdi:account-plus" size="16" /> 幽靈客戶基本資料
+              </span>
+              <span class="text-[10px] text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full font-bold">免密碼・免LINE</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">姓氏 <span class="text-rose-500">*</span></label>
+                <input 
+                  type="text" 
+                  v-model="manualBookingForm.last_name" 
+                  placeholder="例如：王" 
+                  class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">名字 / 稱呼 <span class="text-rose-500">*</span></label>
+                <input 
+                  type="text" 
+                  v-model="manualBookingForm.first_name" 
+                  placeholder="例如：小美" 
+                  class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold text-gray-700 mb-1">
+                聯絡手機號碼 <span class="text-rose-500">*</span>
+                <span class="text-[10px] font-normal text-purple-700 ml-1">（日後客戶透過 LINE 註冊時將依此自動轉正）</span>
+              </label>
+              <input 
+                type="tel" 
+                v-model="manualBookingForm.phone" 
+                placeholder="例如：0912345678" 
+                class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white outline-none font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- 模式二：選擇現有會員 / 既有幽靈客戶 -->
+          <div v-else class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/70 space-y-3">
+            <span class="text-xs font-bold text-emerald-900 flex items-center gap-1">
+              <Icon name="mdi:account-search" size="16" /> 搜尋並選取現有客戶
+            </span>
+            <div class="relative">
+              <Icon name="mdi:magnify" size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input 
+                type="text" 
+                v-model="manualUserSearchQuery" 
+                placeholder="輸入姓名或手機搜尋..." 
+                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#154337] bg-white outline-none" 
+              />
+            </div>
+            <div class="max-h-36 overflow-y-auto space-y-1.5 custom-scrollbar">
+              <div 
+                v-for="u in filteredUsersList" 
+                :key="u.id"
+                @click="selectExistingUser(u)"
+                :class="['p-2 rounded-xl border text-xs flex justify-between items-center cursor-pointer transition', manualBookingForm.selected_user_id === u.id ? 'bg-[#154337] text-white border-[#154337]' : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-800']"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="font-bold">{{ u.last_name }}{{ u.first_name }}</span>
+                  <span :class="['text-[10px] px-1.5 py-0.5 rounded-full font-bold', manualBookingForm.selected_user_id === u.id ? 'bg-white/20 text-white' : (u.is_ghost === 1 ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700')]">
+                    {{ u.is_ghost === 1 ? '👻 幽靈' : '🌐 正式' }}
+                  </span>
+                </div>
+                <span class="font-mono text-[11px] opacity-80">{{ u.phone }}</span>
+              </div>
+              <div v-if="filteredUsersList.length === 0" class="text-xs text-gray-400 text-center py-3">
+                找不到相符的客戶
+              </div>
+            </div>
+          </div>
+
+          <!-- 預約時段設定 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">預約日期 <span class="text-rose-500">*</span></label>
+              <ClientOnly>
+                <MyCalendar v-model="manualBookingForm.dateObj" placeholder="選擇預約日期" class="w-full" />
+              </ClientOnly>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">開始時間 <span class="text-rose-500">*</span></label>
+              <select v-model="manualBookingForm.start_time" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[38px] outline-none font-mono">
+                <option v-for="t in timeOptions" :key="t" :value="t">{{ t }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 指派美容師 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">指派美容師 (選填)</label>
+            <select v-model="manualBookingForm.beautician_id" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white h-[38px] outline-none">
+              <option value="">未指派</option>
+              <option v-for="b in beauticians" :key="b.id" :value="b.id">{{ b.name }}</option>
+            </select>
+          </div>
+
+          <!-- 預約備註 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">預約備註 / 客戶需求說明 (選填)</label>
+            <input 
+              type="text" 
+              v-model="manualBookingForm.notes" 
+              placeholder="例如：LINE 私訊想做粉刺淨膚、朋友介紹" 
+              class="w-full border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#154337] bg-white outline-none"
+            />
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-5 mt-3 border-t border-gray-100">
+          <button 
+            type="button" 
+            @click="showManualBookingModal = false" 
+            class="flex-1 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
+          >
+            取消
+          </button>
+          <button 
+            type="button" 
+            @click="submitManualBooking" 
+            :disabled="manualBookingSaving" 
+            class="flex-1 py-2.5 text-xs font-bold text-white bg-[#876D5A] hover:bg-[#725a49] rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-xs disabled:opacity-50"
+          >
+            <Icon v-if="manualBookingSaving" name="mdi:loading" class="animate-spin" size="16" />
+            <Icon v-else name="mdi:check" size="16" />
+            <span>{{ manualBookingSaving ? '建立中...' : '⚡ 建立預約並鎖定時段' }}</span>
           </button>
         </div>
       </div>
