@@ -225,26 +225,18 @@ const handleSellPackage = async () => {
         user_id: Number(sellForm.user_id),
         course_id: Number(sellForm.course_id),
         amount: sellForm.amount,
-        remaining_count: sellForm.amount
-      })
-    })
-    if (!resSell.ok) throw new Error('新增會員包套失敗')
-
-    await fetch(`${backendUrl}/api/cash-transactions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'income',
-        category: '課程包套預收',
-        amount: totalPrice,
+        remaining_count: sellForm.amount,
+        custom_total_price: totalPrice,
         payment_method: sellForm.payment_method,
-        user_id: Number(sellForm.user_id),
-        description: `購買「${selectedCourse?.name || ''}」共 ${sellForm.amount} 堂 (${totalPrice !== defaultTotalPrice ? '優惠特價 $' + totalPrice : '定價 $' + defaultTotalPrice})`,
         date: new Date().toISOString().slice(0, 10)
       })
     })
+    if (!resSell.ok) {
+      const data = await resSell.json()
+      throw new Error(data.error || '新增會員包套失敗')
+    }
 
-    alert('✅ 銷售成功！')
+    alert('✅ 銷售成功！已同步登記財務現金收入。')
     showSellModal.value = false
     Object.assign(sellForm, { user_id: '', course_id: '', amount: 1, payment_method: 'Cash' })
     fetchData()
