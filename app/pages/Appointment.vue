@@ -1214,10 +1214,24 @@ const submitCompleteAppointment = async () => {
             <div><span class="text-gray-500 text-xs">姓名：</span><span class="font-bold text-gray-900">{{ selectedClient.client_name }}</span></div>
             <div><span class="text-gray-500 text-xs">性別：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_gender || '未填寫' }}</span></div>
           </div>
+          <div class="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-gray-500">帳戶類型：</span>
+              <span v-if="selectedClient.client_is_ghost === 1" class="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-full font-bold">
+                👻 幽靈客戶
+              </span>
+              <span v-else class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                🌐 正式會員
+              </span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-gray-500">履約次數：</span>
+              <span class="font-bold text-[#154337] text-sm">{{ selectedClient.visit_count || 0 }} 次</span>
+            </div>
+          </div>
           <div><span class="text-gray-500">電話：</span><span class="font-semibold text-gray-800 font-mono">{{ selectedClient.client_phone }}</span></div>
           <div><span class="text-gray-500">信箱：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_email || '未填寫' }}</span></div>
           <div><span class="text-gray-500">所在地：</span><span class="font-semibold text-gray-800">{{ selectedClient.client_location || '未填寫' }}</span></div>
-          <div><span class="text-gray-500">履約次數：</span><span class="font-bold text-[#154337]">{{ selectedClient.visit_count || 0 }} 次</span></div>
           
           <!-- 問卷區 -->
           <div class="border-t border-gray-200 pt-3 mt-2">
