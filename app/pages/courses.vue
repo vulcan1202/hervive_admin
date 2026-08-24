@@ -360,10 +360,10 @@ const submitRefund = async () => {
 
 const deleteUserPackage = async (pkg: any) => {
   if (pkg.amount !== pkg.remaining_count) {
-    return alert(`❌ 無法刪除此包套！\n原因：此包套總堂數為 ${pkg.amount} 堂，但剩餘 ${pkg.remaining_count} 堂（已有堂數被消耗履約）。基於帳務與履約正確性，若要部分結束請使用「退款」功能。`)
+    return alert(`❌ 無法直接刪除此包套！\n\n原因：此包套總堂數為 ${pkg.amount} 堂，剩餘 ${pkg.remaining_count} 堂（已有履約消耗紀錄）。\n若直接刪除會破壞實質營收認列與財務報表的平衡。\n\n💡 若顧客欲退回剩餘未使用的堂數，請使用「退款」功能辦理。`)
   }
 
-  if (!confirm(`確定要刪除「${pkg.client_name}」的「${pkg.course_name}」包套紀錄嗎？\n注意：這將會同步扣除對應的現金預收收入。`)) return
+  if (!confirm(`確定要刪除「${pkg.client_name}」的「${pkg.course_name}」包套紀錄嗎？\n\n注意：此包套尚未消耗任何堂數，刪除將會同步扣除對應的預收現金收入。`)) return
 
   try {
     const res = await fetch(`${backendUrl}/api/users-courses?id=${pkg.id}`, { method: 'DELETE' })
