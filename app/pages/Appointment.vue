@@ -913,8 +913,8 @@ const submitCompleteAppointment = async () => {
                   <span class="text-xs text-gray-500 font-bold">客戶姓名</span>
                   <button @click="openClientModal(appt)" class="font-bold text-sm flex items-center gap-1.5" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
                     <span class="underline decoration-dotted underline-offset-2">{{ appt.client_name }}</span>
-                    <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
-                      履約 {{ appt.visit_count || 0 }} 次
+                    <span class="text-[10px] bg-amber-50 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-full font-black">
+                      第 {{ appt.visit_count || 0 }} 次履約
                     </span>
                   </button>
                 </div>
@@ -989,8 +989,8 @@ const submitCompleteAppointment = async () => {
                   <td class="p-3.5 font-medium">
                     <button @click="openClientModal(appt)" class="font-bold underline decoration-dotted hover:opacity-80 transition flex items-center gap-1.5 cursor-pointer" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
                       <span>{{ appt.client_name }}</span>
-                      <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
-                        履約 {{ appt.visit_count || 0 }} 次
+                      <span class="text-[10px] bg-amber-50 text-amber-900 border border-amber-200/80 px-1.5 py-0.5 rounded-full font-black">
+                        第 {{ appt.visit_count || 0 }} 次履約
                       </span>
                     </button>
                   </td>

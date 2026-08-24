@@ -1255,8 +1255,8 @@ const saveUserNotes = async (appt: any) => {
               <div class="mb-3 flex items-center gap-1.5">
                 <button @click="openClientModal(appt)" class="font-bold text-sm flex items-center gap-1.5 text-left transition group" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
                   <span class="underline decoration-dotted underline-offset-4">{{ appt.client_name }}</span>
-                  <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-black">
-                    履約 {{ appt.visit_count || 0 }} 次
+                  <span class="text-[10px] bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-full font-black">
+                    第 {{ appt.visit_count || 0 }} 次履約
                   </span>
                   <Icon name="mdi:chevron-right" size="16" class="text-gray-400 group-hover:translate-x-0.5 transition" />
                 </button>
