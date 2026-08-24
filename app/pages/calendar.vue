@@ -1145,9 +1145,8 @@ const saveUserNotes = async (appt: any) => {
                     ]"
                   >
                     <div class="font-bold truncate flex justify-between items-center">
-                      <span>
+                      <span :class="appt.client_is_ghost === 1 ? 'text-purple-800' : 'text-[#154337]'">
                         {{ appt.start_time }} {{ appt.client_name }}
-                        <span v-if="appt.client_is_ghost === 1" class="text-purple-600 font-bold ml-0.5" title="幽靈客戶 / 手動代約">👻</span>
                       </span>
                     </div>
                     <div class="text-[9px] opacity-75 truncate flex items-center justify-between">
@@ -1254,16 +1253,10 @@ const saveUserNotes = async (appt: any) => {
 
               <!-- 客戶姓名 -->
               <div class="mb-3 flex items-center gap-1.5">
-                <button @click="openClientModal(appt)" class="font-bold text-sm text-gray-900 hover:text-[#154337] flex items-center gap-1.5 text-left transition group">
-                  <span class="underline decoration-dotted underline-offset-4 group-hover:text-[#154337]">{{ appt.client_name }}</span>
-                  <span v-if="appt.client_is_ghost === 1" class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">
-                    👻 幽靈
-                  </span>
-                  <span v-else class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold">
-                    🌐 會員
-                  </span>
-                  <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-black">
-                    履約 {{ appt.visit_count }} 次
+                <button @click="openClientModal(appt)" class="font-bold text-sm flex items-center gap-1.5 text-left transition group" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
+                  <span class="underline decoration-dotted underline-offset-4">{{ appt.client_name }}</span>
+                  <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-black">
+                    履約 {{ appt.visit_count || 0 }} 次
                   </span>
                   <Icon name="mdi:chevron-right" size="16" class="text-gray-400 group-hover:translate-x-0.5 transition" />
                 </button>

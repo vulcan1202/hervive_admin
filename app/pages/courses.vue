@@ -810,10 +810,7 @@ onMounted(() => fetchData())
                 :class="['p-2.5 text-xs sm:text-sm cursor-pointer hover:bg-[#FAF4EE] transition flex justify-between items-center', String(sellForm.user_id) === String(u.id) ? 'bg-[#FAF4EE] font-bold text-[#154337]' : 'text-gray-700']"
               >
                 <div class="flex items-center gap-1.5">
-                  <span class="font-bold">{{ u.last_name }}{{ u.first_name }}</span>
-                  <span :class="['text-[10px] px-1.5 py-0.5 rounded-full font-bold', u.is_ghost === 1 ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700']">
-                    {{ u.is_ghost === 1 ? '👻 幽靈' : '🌐 正式' }}
-                  </span>
+                  <span class="font-bold" :class="u.is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">{{ u.last_name }}{{ u.first_name }}</span>
                 </div>
                 <span class="text-gray-400 font-mono text-xs">{{ u.phone }}</span>
               </div>

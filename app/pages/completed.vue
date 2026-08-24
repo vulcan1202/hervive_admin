@@ -888,7 +888,7 @@ onMounted(() => {
             <div class="flex justify-between items-start border-b border-gray-100 pb-2.5">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-gray-900 text-base font-serif">{{ appt.client_name }}</span>
+                  <span class="font-bold text-base font-serif" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">{{ appt.client_name }}</span>
                   <span class="text-xs text-gray-400">({{ appt.client_gender || '未填' }})</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1">
@@ -1006,7 +1006,7 @@ onMounted(() => {
                 
                 <!-- 姓名與性別 -->
                 <td class="p-3.5">
-                  <div class="font-bold text-gray-900 text-sm font-serif">{{ appt.client_name }}</div>
+                  <div class="font-bold text-sm font-serif" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">{{ appt.client_name }}</div>
                   <div class="text-[11px] text-gray-400">{{ appt.client_gender || '未填性別' }}</div>
                 </td>
 

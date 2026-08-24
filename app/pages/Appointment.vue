@@ -911,15 +911,11 @@ const submitCompleteAppointment = async () => {
               <div class="flex flex-col gap-2.5 bg-[#FAF4EE]/50 p-3 rounded-xl border border-gray-100">
                 <div class="flex justify-between items-center">
                   <span class="text-xs text-gray-500 font-bold">客戶姓名</span>
-                  <button @click="openClientModal(appt)" class="text-[#154337] font-bold text-sm flex items-center gap-1">
+                  <button @click="openClientModal(appt)" class="font-bold text-sm flex items-center gap-1.5" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
                     <span class="underline decoration-dotted underline-offset-2">{{ appt.client_name }}</span>
-                    <span v-if="appt.client_is_ghost === 1" class="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold ml-1">
-                      👻 幽靈
+                    <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
+                      履約 {{ appt.visit_count || 0 }} 次
                     </span>
-                    <span v-else class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold ml-1">
-                      🌐 會員
-                    </span>
-                    <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full ml-1 font-black">{{ appt.visit_count }}次</span>
                   </button>
                 </div>
                 <div class="flex justify-between items-center">
@@ -991,16 +987,10 @@ const submitCompleteAppointment = async () => {
                     </select>
                   </td>
                   <td class="p-3.5 font-medium">
-                    <button @click="openClientModal(appt)" class="text-[#154337] font-bold underline decoration-dotted hover:text-black transition flex items-center gap-1.5 cursor-pointer">
+                    <button @click="openClientModal(appt)" class="font-bold underline decoration-dotted hover:opacity-80 transition flex items-center gap-1.5 cursor-pointer" :class="appt.client_is_ghost === 1 ? 'text-purple-700' : 'text-[#154337]'">
                       <span>{{ appt.client_name }}</span>
-                      <span v-if="appt.client_is_ghost === 1" class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">
-                        👻 幽靈
-                      </span>
-                      <span v-else class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full font-bold">
-                        🌐 會員
-                      </span>
-                      <span v-if="appt.visit_count > 0" class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
-                        履約 {{ appt.visit_count }} 次
+                      <span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full font-black">
+                        履約 {{ appt.visit_count || 0 }} 次
                       </span>
                     </button>
                   </td>
