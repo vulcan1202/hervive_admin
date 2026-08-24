@@ -328,12 +328,10 @@ const handleStockSubmit = async () => {
 
     const result = await res.json()
     if (res.ok) {
-      showToast(isEditingStock.value ? '異動紀錄已更新，庫存與連動財務帳目已同步更新！' : '庫存異動登記成功！')
+      showToast(isEditingStock.value ? '異動紀錄已更新，庫存已重新計算！' : '庫存異動登記成功！')
       showStockModal.value = false
-      await fetchProducts()
+      fetchProducts()
       if (selectedHistoryProduct.value) {
-        const freshP = products.value.find(p => p.id === selectedHistoryProduct.value?.id)
-        if (freshP) selectedHistoryProduct.value = freshP
         openProductHistoryModal(selectedHistoryProduct.value)
       }
       if (activeTab.value === 'transactions') fetchTransactions()
