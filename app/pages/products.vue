@@ -272,6 +272,27 @@ const getStockChange = (type: string, quantity: number): number => {
   return 0
 }
 
+const getSignedQuantity = (type: string, quantity: number): number => {
+  if (type === 'purchase') return Math.abs(quantity)
+  if (type === 'sale' || type === 'usage') return -Math.abs(quantity)
+  if (type === 'adjustment') return quantity
+  return quantity
+}
+
+const formatQuantityDisplay = (type: string, quantity: number): string => {
+  const signed = getSignedQuantity(type, quantity)
+  if (signed > 0) return `+${signed}`
+  if (signed < 0) return `${signed}`
+  return '0'
+}
+
+const getQuantityColorClass = (type: string, quantity: number): string => {
+  const signed = getSignedQuantity(type, quantity)
+  if (signed > 0) return 'text-emerald-700'
+  if (signed < 0) return 'text-rose-600'
+  return 'text-gray-500'
+}
+
 // 送出庫存異動
 const handleStockSubmit = async () => {
   if (stockForm.type !== 'adjustment' && (stockForm.quantity === undefined || stockForm.quantity === null || stockForm.quantity === 0)) {
@@ -772,7 +793,7 @@ onMounted(() => { fetchProducts() })
               </div>
 
               <div class="flex justify-between items-center bg-[#FAF4EE]/70 p-2.5 rounded-xl text-xs font-mono">
-                <div>異動數量: <span class="font-bold text-gray-800">{{ t.type === 'purchase' ? '+' : t.type === 'sale' || t.type === 'usage' ? '-' : '' }}{{ t.quantity }} 件</span></div>
+                <div>異動數量: <span class="font-black text-sm" :class="getQuantityColorClass(t.type, t.quantity)">{{ formatQuantityDisplay(t.type, t.quantity) }} 件</span></div>
                 <div>總金額: <span class="font-bold text-[#154337]">${{ (t.total_amount || 0).toLocaleString() }}</span></div>
               </div>
 
@@ -821,8 +842,8 @@ onMounted(() => { fetchProducts() })
                       {{ getTypeName(t.type) }}
                     </span>
                   </td>
-                  <td class="px-6 py-4 font-mono font-bold text-gray-800">
-                    {{ t.type === 'purchase' ? '+' : t.type === 'sale' || t.type === 'usage' ? '-' : '' }}{{ t.quantity }} 件
+                  <td class="px-6 py-4 font-mono font-black text-sm" :class="getQuantityColorClass(t.type, t.quantity)">
+                    {{ formatQuantityDisplay(t.type, t.quantity) }} 件
                   </td>
                   <td class="px-6 py-4 font-mono text-xs">
                     <span class="block font-bold text-[#154337]">${{ (t.total_amount || 0).toLocaleString() }}</span>
@@ -925,8 +946,8 @@ onMounted(() => { fetchProducts() })
 
                 <div class="flex items-center gap-2">
                   <div class="text-right font-mono">
-                    <span :class="['font-black text-xs', h.type === 'purchase' ? 'text-emerald-700' : h.type === 'sale' || h.type === 'usage' ? 'text-rose-600' : 'text-amber-700']">
-                      {{ h.type === 'purchase' ? '+' : h.type === 'sale' || h.type === 'usage' ? '-' : '' }}{{ h.quantity }} 件
+                    <span :class="['font-black text-xs', getQuantityColorClass(h.type, h.quantity)]">
+                      {{ formatQuantityDisplay(h.type, h.quantity) }} 件
                     </span>
                     <span v-if="h.total_amount" class="text-gray-400 text-[10px] ml-1.5">(${{ h.total_amount.toLocaleString() }})</span>
                   </div>
