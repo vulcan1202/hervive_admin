@@ -328,10 +328,12 @@ const handleStockSubmit = async () => {
 
     const result = await res.json()
     if (res.ok) {
-      showToast(isEditingStock.value ? '異動紀錄已更新，庫存已重新計算！' : '庫存異動登記成功！')
+      showToast(isEditingStock.value ? '異動紀錄已更新，庫存與連動財務帳目已同步更新！' : '庫存異動登記成功！')
       showStockModal.value = false
-      fetchProducts()
+      await fetchProducts()
       if (selectedHistoryProduct.value) {
+        const freshP = products.value.find(p => p.id === selectedHistoryProduct.value?.id)
+        if (freshP) selectedHistoryProduct.value = freshP
         openProductHistoryModal(selectedHistoryProduct.value)
       }
       if (activeTab.value === 'transactions') fetchTransactions()
@@ -951,6 +953,13 @@ onMounted(() => { fetchProducts() })
                     </span>
                     <span v-if="h.total_amount" class="text-gray-400 text-[10px] ml-1.5">(${{ h.total_amount.toLocaleString() }})</span>
                   </div>
+                  <button 
+                    @click="openStockModal(selectedHistoryProduct!, h)" 
+                    class="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                    title="編輯此筆紀錄"
+                  >
+                    <Icon name="mdi:pencil-outline" size="14" />
+                  </button>
                   <button 
                     @click="handleDeleteTransaction(h.id!)" 
                     class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
