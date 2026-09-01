@@ -107,8 +107,8 @@ const finishedPackagesCount = computed(() => {
 const filteredUserPackagesList = computed(() => {
   let list = userCoursesList.value
 
-  // 1. 已用罄開關過濾 (預設 false: 只看進行中 remaining_count > 0)
-  if (!showFinishedPackages.value) {
+  // 1. 已用罄開關過濾 (預設 false: 只看進行中 remaining_count > 0，若有主動搜尋關鍵字則自動穿透搜尋全量)
+  if (!showFinishedPackages.value && !packageSearchText.value.trim()) {
     list = list.filter(pkg => (pkg.remaining_count || 0) > 0)
   }
 
@@ -576,6 +576,7 @@ onMounted(() => fetchData())
                 <div>
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <h3 class="font-bold text-gray-900 text-base">{{ pkg.client_name || '未知客戶' }}</h3>
+                    <span v-if="pkg.client_is_ghost === 1" class="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">👻 幽靈</span>
                     <span v-if="pkg.client_phone" class="text-[11px] text-gray-400 font-mono">({{ pkg.client_phone }})</span>
                   </div>
                   <p class="text-xs font-bold text-[#154337] mt-0.5">{{ pkg.course_name || '未知課程' }}</p>
@@ -648,6 +649,7 @@ onMounted(() => fetchData())
                     <td class="p-4 text-gray-500 font-mono text-xs">{{ pkg.purchase_date?.slice(0, 10) || '-' }}</td>
                     <td class="p-4 font-bold text-gray-900">
                       {{ pkg.client_name || '未知客戶' }}
+                      <span v-if="pkg.client_is_ghost === 1" class="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold ml-1">👻 幽靈客戶</span>
                       <span v-if="pkg.client_phone" class="text-xs text-gray-400 font-mono font-normal ml-1">({{ pkg.client_phone }})</span>
                     </td>
                     <td class="p-4 text-[#154337] font-bold">{{ pkg.course_name || '未知課程' }}</td>

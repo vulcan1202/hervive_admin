@@ -671,6 +671,18 @@ const openCompleteModal = async (appt: any) => {
       const prodData = await prodRes.json()
       availableProductsList.value = prodData.data || []
     }
+
+    // 🌟 若客戶名下無任何可用包套 (例如幽靈客戶或初次來店客人)，自動預先新增一筆現場加購/單次消費項目！
+    if (clientActivePackages.value.length === 0 && availableCoursesList.value.length > 0) {
+      const defaultCourse = availableCoursesList.value[0]
+      newCoursesToBuy.value.push({
+        course_id: defaultCourse.id,
+        buy_amount: 1,
+        use_count: 1,
+        payment_method: 'Cash',
+        custom_total_price: defaultCourse.price
+      })
+    }
   } catch (err) {
     console.error("撈取點收資料失敗", err)
   } finally {
@@ -726,6 +738,11 @@ const submitCompleteAppointment = async () => {
       payment_method: p.payment_method,
       custom_unit_price: p.custom_unit_price !== undefined && p.custom_unit_price !== null ? Number(p.custom_unit_price) : undefined
     }))
+
+  // 🌟 嚴格防呆校驗：每筆履約預約皆需記錄服務課程（扣抵包套或現場加購/單次消費）
+  if (courses_used.length === 0 && new_courses_bought.length === 0) {
+    return alert('⚠️ 請選擇扣減會員既有包套，或填寫現場購買/單次消費課程！\n（每一筆預約履約皆需留下服務課程與帳務紀錄）')
+  }
 
   try {
     const res = await fetch(`${backendUrl}/api/appointments/complete`, {
@@ -1032,7 +1049,8 @@ const submitCompleteAppointment = async () => {
           <Icon name="mdi:check-circle-outline" class="text-emerald-700" size="22" /> 預約完成點收與堂數扣減
         </h3>
         <p class="text-xs text-gray-500 mb-4 font-mono">
-          客戶：<span class="font-bold text-gray-900">{{ selectedApptForComplete.client_name }}</span> | 
+          客戶：<span class="font-bold text-gray-900">{{ selectedApptForComplete.client_name }}</span>
+          <span v-if="selectedApptForComplete.client_is_ghost === 1" class="ml-1 text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">👻 幽靈客戶</span> | 
           時間：{{ selectedApptForComplete.date }} {{ selectedApptForComplete.start_time }}
         </p>
 

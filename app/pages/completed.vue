@@ -336,11 +336,11 @@ const openFulfillmentModal = async (appt: any) => {
     if (detailData.new_courses_bought && Array.isArray(detailData.new_courses_bought)) {
       for (const cb of detailData.new_courses_bought) {
         newCoursesToBuy.value.push({
-          course_id: '',
-          buy_amount: 1,
-          use_count: 1,
+          course_id: cb.course_id !== undefined && cb.course_id !== null ? cb.course_id : '',
+          buy_amount: cb.buy_amount || 1,
+          use_count: cb.use_count || 1,
           payment_method: cb.payment_method || 'Cash',
-          custom_total_price: cb.amount || undefined
+          custom_total_price: cb.custom_total_price !== undefined ? cb.custom_total_price : (cb.amount !== undefined ? cb.amount : undefined)
         })
       }
     }
@@ -1121,6 +1121,7 @@ onMounted(() => {
             <div class="flex items-center gap-1.5">
               <span class="text-gray-500">顧客姓名：</span>
               <strong class="text-gray-900 text-sm font-serif">{{ selectedApptForFulfillment.client_name }}</strong>
+              <span v-if="selectedApptForFulfillment.client_is_ghost === 1" class="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded-full font-bold">👻 幽靈客戶</span>
             </div>
             <span class="text-gray-300">|</span>
             <div class="flex items-center gap-1.5">
